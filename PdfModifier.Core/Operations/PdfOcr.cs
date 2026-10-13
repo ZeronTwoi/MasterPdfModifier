@@ -66,6 +66,22 @@ public static class PdfOcr
 
     public static (bool Available, string Detail) EngineStatus() => OcrBackends.Probe();
 
+    /// <summary>
+    /// The languages (app codes) whose data has to be downloaded before they can be read here. None when the engine
+    /// has them already, and none when there is no engine: that is the first thing to put right then.
+    /// </summary>
+    public static IReadOnlyList<string> MissingLanguages(IEnumerable<string> languageCodes)
+    {
+        try
+        {
+            return OcrBackends.Missing(OcrBackends.Get(), languageCodes.Where(Languages.IsSupported));
+        }
+        catch (OcrException)
+        {
+            return [];
+        }
+    }
+
     /// <summary>Finds and reads the text on one page. The page is rendered, so this works for scans and text pages alike.</summary>
     public static OcrPageResult RecognizePage(byte[] pdf, int pageIndex, OcrSettings settings, CancellationToken cancel = default)
     {
@@ -94,7 +110,7 @@ public static class PdfOcr
         if (codes.Count == 0) codes.Add(Languages.Default);
 
         var backend = OcrBackends.Get();
-        if (backend.NeedsLocalData && TessData.Missing(codes) is { Count: > 0 } missing)
+        if (OcrBackends.Missing(backend, codes) is { Count: > 0 } missing)
             throw new OcrLanguageMissingException(missing);
 
         var use = codes;

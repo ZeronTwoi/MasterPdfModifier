@@ -55,8 +55,14 @@
                     <Button Classes="ghost" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}" ToolTip.Tip="{DynamicResource T_Redo}">
                         <controls:Icon Data="{x:Static controls:Icons.Redo}" />
                     </Button>
-                    <Button Classes="ghost" Command="{Binding ShowSettingsCommand}" ToolTip.Tip="{DynamicResource T_ToolSettings}">
-                        <controls:Icon Data="{x:Static controls:Icons.Settings}" />
+                    <Button Classes="ghost" Command="{Binding ShowSettingsCommand}" ToolTip.Tip="{Binding SettingsTip}">
+                        <Panel>
+                            <controls:Icon Data="{x:Static controls:Icons.Settings}" />
+                            <!-- A newer version of the app is out: the settings say which, and lead to it. -->
+                            <controls:WarningSign Fill="{DynamicResource WarningBrush}" Mark="{DynamicResource WarningMark}"
+                                                  Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                  Margin="0,-6,-8,0" IsVisible="{Binding HasNewVersion}" />
+                        </Panel>
                     </Button>
                     <Border Classes="separator" />
                     <Button Classes="ghost" Command="{Binding OpenCommand}" IsEnabled="{Binding IsIdle}">
@@ -548,8 +554,12 @@
                                     </DataTemplate>
                                     <DataTemplate DataType="vm:InfoField">
                                         <Panel IsVisible="{Binding IsVisible}">
-                                            <Border Classes="note" IsVisible="{Binding HasText}" Margin="0,0,0,13">
-                                                <SelectableTextBlock Classes="muted" Text="{Binding Text}" TextWrapping="Wrap" FontSize="12.5" LineHeight="18" />
+                                            <Border Classes="note" Classes.warns="{Binding Warns}" IsVisible="{Binding HasText}" Margin="0,0,0,13">
+                                                <DockPanel>
+                                                    <controls:WarningSign DockPanel.Dock="Left" Fill="{DynamicResource WarningBrush}" Mark="{DynamicResource WarningMark}"
+                                                                          Width="18" Height="18" Margin="0,0,9,0" VerticalAlignment="Top" IsVisible="{Binding Warns}" />
+                                                    <SelectableTextBlock Classes="muted" Text="{Binding Text}" TextWrapping="Wrap" FontSize="12.5" LineHeight="18" />
+                                                </DockPanel>
                                             </Border>
                                         </Panel>
                                     </DataTemplate>

@@ -1,4 +1,4 @@
-# PDF Modifier: the guide
+# Master PDF Modifier: the guide
 
 What each part of the app does, how to get around in it, and the limits worth knowing.
 The short version is on the [main page](../README.md).
@@ -12,6 +12,8 @@ The short version is on the [main page](../README.md).
 - [Compress](#compress)
 - [Automate](#automate)
 - [Languages](#languages)
+- [What the app fetches by itself](#what-the-app-fetches-by-itself)
+- [New versions](#new-versions)
 - [Getting around](#getting-around)
 - [Good to know](#good-to-know)
 
@@ -126,14 +128,52 @@ metadata) on the selected or all pages of the open document, or on a batch of fi
 
 ## Languages
 
-The interface is available in English, Español, Deutsch, Русский, Français, 日本語, Português and Türkçe (English
-by default; change it under **Settings**, the button with the sliders at the top).
+The interface is available in English, Español, Deutsch, Русский, Français, 日本語, Português and Türkçe. It starts
+in the language of the computer where that is one of these, in English otherwise; change it under **Settings**, the
+button with the sliders at the top. The Windows setup speaks the same eight languages.
 
 **Detection languages**, the ones text recognition looks for in scans, are chosen in the same place; several can be
-ticked at once, and the language of each page is then worked out automatically. Language data (2–15 MB per language)
-is downloaded on request from the official Tesseract repository, from Settings or right where it is first needed.
+ticked at once, and the language of each page is then worked out automatically.
 
 <img src="images/settings-turkish.png" width="820" alt="The settings, with the interface in Turkish and the list of detection languages">
+
+## What the app fetches by itself
+
+Nothing has to be installed for the app, and nothing by hand for text recognition either. The first time a tool
+needs something that is not there, the app says what it is and where it comes from and asks whether to fetch it;
+after a yes it downloads, sets up and carries on with what it was doing.
+
+- **Language data** (2–15 MB per language), from the official Tesseract project. Asked for where a scan is first
+  read, for the languages ticked in Settings.
+- **On Windows, the Microsoft Visual C++ runtime** (about 25 MB), which the text recognition is built on. Most
+  computers have it from some other program; a freshly set-up one has not. It is downloaded from Microsoft, its
+  signature is checked, and Windows asks for permission to install it.
+- **On Linux, the Tesseract program**, where it is not installed yet: through the package manager of the
+  distribution, which asks for your password in a window of its own. Installed from the `.deb` package, the app
+  has it from the start.
+
+"Not now" is taken at its word until the app is closed: the question does not come back with every page. The note
+in the tool keeps a **Set up text recognition** button for a change of mind, and Settings has the same. Everything
+that does not read text from pictures works without any of this.
+
+On Linux, an app that was started from the unpacked archive is in no menu. The first time it is started it asks
+whether it should put itself into the application menu; Settings can add or remove that entry later.
+
+## New versions
+
+The first time the app is started it asks whether it should tell you when a new version is out.
+
+- **Yes:** each time the app is started it takes one look: a single request to GitHub, where the app is published,
+  which is answered with the number of the newest version. No page is loaded and nothing about you or your
+  documents is sent. It does not look again while the app is open.
+- **No**, or closing the question: the app never connects for this, and it does not ask again.
+
+When there is a newer version, the settings button at the top gets a warning sign. Settings then say which version
+is out and which one you have, and **Open the download page** leads to it; installing the new version over the old
+one keeps your settings. The box *Tell me when a new version is out* in Settings changes your answer at any time;
+it counts from the next start of the app.
+
+<img src="images/update-notice.png" width="820" alt="The warning sign on the settings button, and the note in Settings that a newer version is out">
 
 ## Getting around
 

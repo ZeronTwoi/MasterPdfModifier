@@ -362,7 +362,7 @@ public sealed class OcrTool : Tool
     private readonly PagesField _pages;
     private readonly BoolField _force, _careful;
     private readonly InfoField _status;
-    private readonly ActionField _mark, _unmark;
+    private readonly ActionField _mark, _unmark, _setup;
 
     // Passages marked for a careful reading, by page, as frames on the page view. They belong to one state of the
     // document: any change to it may move the pages they are on.
@@ -377,6 +377,7 @@ public sealed class OcrTool : Tool
         _force = Add(new BoolField("OcrForce"));
         _careful = Add(new BoolField("OcrCareful", main.Settings.OcrCareful));
         _status = Add(new InfoField());
+        _setup = Add(OcrSetup.Button(main));
         Add(new ActionField("OcrShow", () => main.RunBusy(ShowFound)));
         Add(new InfoField()).SetKey("OcrAreaHint");
         _mark = new ActionField("OcrAreaAdd", () =>
@@ -411,7 +412,7 @@ public sealed class OcrTool : Tool
     /// </summary>
     private async Task ShowFound(ToolContext context)
     {
-        if (OcrSetup.Problem(context.Settings) is { } problem) throw new UserException(problem);
+        await context.Main.Supplies.Ensure(context);
         var view = context.Session.View!;
         var page = context.CurrentPage;
         var settings = OcrSetup.From(context.Settings);
@@ -452,8 +453,11 @@ public sealed class OcrTool : Tool
         _syncing = true;
         _careful.Value = main.Settings.OcrCareful;
         _syncing = false;
-        _status.SetText(OcrSetup.Problem(main.Settings)
-                        ?? Loc.Format("OcrLanguagesInUse", OcrSetup.LanguageNames(main.Settings.OcrLanguages)));
+        var lack = main.Supplies.Lack();
+        _status.SetText(lack?.Text ?? Loc.Format("OcrLanguagesInUse", OcrSetup.LanguageNames(main.Settings.OcrLanguages)));
+        _setup.IsVisible = lack is { CanFetch: true };
+        // Opening this tool on a document is asking for text recognition: what it lacks is offered right away.
+        if (main.HasDocument) main.Supplies.Offer();
         if (!ReferenceEquals(main.Session.Bytes, _document))
         {
             _areas.Clear();
@@ -543,7 +547,7 @@ public sealed class OcrTool : Tool
 
     public override async Task RunAsync(ToolContext context)
     {
-        if (OcrSetup.Problem(context.Settings) is { } problem) throw new UserException(problem);
+        await context.Main.Supplies.Ensure(context);
         var pdf = context.Pdf;
         var pages = context.Resolve(_pages);
         var settings = OcrSetup.From(context.Settings);
@@ -618,7 +622,7 @@ public sealed class AutomateTool : Tool
     {
         if (!new[] { _autoCrop, _enhance, _watermarks, _flatten, _ocr, _compress, _metadata }.Any(step => step.Value))
             throw new UserException(Loc.Get("AutoNoSteps"));
-        if (_ocr.Value && OcrSetup.Problem(context.Settings) is { } problem) throw new UserException(problem);
+        if (_ocr.Value) await context.Main.Supplies.Ensure(context);
         var ocrSettings = OcrSetup.From(context.Settings);
 
         if (_target.Key == "current")

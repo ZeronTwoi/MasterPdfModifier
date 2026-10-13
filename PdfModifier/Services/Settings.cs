@@ -25,10 +25,28 @@ public sealed class Settings
     /// <summary>Read scans with every means there is: slower, for pages that are blurred, coarse or pale.</summary>
     public bool OcrCareful { get; set; }
 
-    /// <summary>Where the preferences are stored. Tests point this at a scratch folder.</summary>
-    public static string FilePath { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.Create),
-        "PdfModifier", "settings.json");
+    /// <summary>
+    /// Whether to look, when the app starts, if a newer version has been published. Empty until the user has been
+    /// asked, which happens once. With a no, nothing ever connects for this (see <see cref="UpdateCheck"/>).
+    /// </summary>
+    public bool? UpdateNotice { get; set; }
+
+    /// <summary>
+    /// Linux: the question whether to put the app into the application menu has been asked. It is asked once; the
+    /// settings have a button for a later yes.
+    /// </summary>
+    public bool MenuEntryOffered { get; set; }
+
+    /// <summary>
+    /// Where the preferences are stored: in the per-user configuration folder, or in the file the PDFMODIFIER_SETTINGS
+    /// environment variable names, e.g. for a copy of the app that is carried around. Tests point this at a scratch
+    /// folder.
+    /// </summary>
+    public static string FilePath { get; set; } = Environment.GetEnvironmentVariable("PDFMODIFIER_SETTINGS") is { Length: > 0 } custom
+        ? custom
+        : Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.Create),
+            "PdfModifier", "settings.json");
 
     public static Settings Load()
     {
@@ -50,8 +68,13 @@ public sealed class Settings
             // Unreadable preferences are not worth failing the start for; fall back to the defaults.
         }
 
-        return new Settings();
+        // Before anything was chosen, the app speaks the language of the computer, as its installer does.
+        return new Settings { UiLanguage = LanguageOf(System.Globalization.CultureInfo.CurrentUICulture) };
     }
+
+    /// <summary>The language of the interface for a computer set to this culture: its own where the app has it, English otherwise.</summary>
+    internal static string LanguageOf(System.Globalization.CultureInfo culture) =>
+        Languages.IsSupported(culture.TwoLetterISOLanguageName) ? Languages.Get(culture.TwoLetterISOLanguageName).Code : Languages.Default;
 
     public bool IsPinned(string path) => PinnedImages.Any(p => p.Equals(path, StringComparison.OrdinalIgnoreCase));
 

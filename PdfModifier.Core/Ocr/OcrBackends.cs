@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
+using PdfModifier.Core.Text;
 using SkiaSharp;
 
 namespace PdfModifier.Core.Ocr;
@@ -24,8 +25,11 @@ internal interface IOcrBackend
 {
     string Name { get; }
 
-    /// <summary>True when the backend needs the language files in the app's own data folder.</summary>
-    bool NeedsLocalData { get; }
+    /// <summary>
+    /// True when the engine has all of these languages (Tesseract codes) from somewhere else than the app's own data
+    /// folder, so nothing needs to be downloaded for them.
+    /// </summary>
+    bool BringsLanguages(IReadOnlyList<string> tesseractCodes);
 
     /// <param name="languages">Tesseract codes joined with '+', e.g. "eng+rus".</param>
     /// <param name="sparse">
@@ -57,10 +61,27 @@ internal static class OcrBackends
             if (TesseractCli.TryCreate() is { } cli) return _backend = cli;
 
             _failure = OperatingSystem.IsWindows()
-                ? "The text recognition engine could not be loaded. Install the Microsoft Visual C++ runtime, or install Tesseract and add it to the PATH."
-                : "Text recognition needs Tesseract. Install it with your package manager (for example: sudo apt install tesseract-ocr).";
+                ? "The text recognition engine could not be loaded. It needs the Microsoft Visual C++ runtime."
+                : "Text recognition needs the Tesseract program, which is not installed.";
             throw new OcrException(_failure);
         }
+    }
+
+    /// <summary>Forgets what was found, so the next use looks again: after something the engine needs was installed.</summary>
+    public static void Reset()
+    {
+        lock (Gate)
+        {
+            _backend = null;
+            _failure = null;
+        }
+    }
+
+    /// <summary>The languages (app codes) whose data has to be fetched before the engine can read them.</summary>
+    public static IReadOnlyList<string> Missing(IOcrBackend backend, IEnumerable<string> languageCodes)
+    {
+        var codes = languageCodes.ToList();
+        return backend.BringsLanguages(codes.Select(code => Languages.Get(code).TesseractCode).ToList()) ? [] : TessData.Missing(codes);
     }
 
     public static (bool Available, string Detail) Probe()
@@ -84,7 +105,7 @@ internal sealed class InProcessTesseract : IOcrBackend
     private Tesseract.TesseractEngine? _engine;
 
     public string Name => "Tesseract (built in)";
-    public bool NeedsLocalData => true;
+    public bool BringsLanguages(IReadOnlyList<string> tesseractCodes) => false;
 
     public static InProcessTesseract? TryCreate()
     {
@@ -150,8 +171,38 @@ internal sealed class InProcessTesseract : IOcrBackend
 /// <summary>Drives a tesseract executable found on the PATH and reads its TSV output.</summary>
 internal sealed class TesseractCli(string executable) : IOcrBackend
 {
+    private HashSet<string>? _installed;
+
     public string Name => "Tesseract (" + executable + ")";
-    public bool NeedsLocalData => false;
+
+    /// <summary>The languages the program was installed with; the app's own downloads make up for the rest.</summary>
+    public bool BringsLanguages(IReadOnlyList<string> tesseractCodes)
+    {
+        lock (this)
+        {
+            if (_installed == null)
+            {
+                try
+                {
+                    // Older versions print the list as a remark rather than as output.
+                    var (_, output, remarks) = Run(executable, ["--list-langs"]);
+                    _installed = ParseLanguageList(output + "\n" + remarks);
+                }
+                catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
+                {
+                    _installed = [];
+                }
+            }
+
+            return tesseractCodes.All(_installed.Contains);
+        }
+    }
+
+    /// <summary>The codes in the answer to "tesseract --list-langs": a heading, then one language to a line.</summary>
+    internal static HashSet<string> ParseLanguageList(string listing) => listing.Split('\n')
+        .Select(line => line.Trim())
+        .Where(line => line.Length > 0 && line.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '/' or '-'))
+        .ToHashSet();
 
     public static TesseractCli? TryCreate()
     {

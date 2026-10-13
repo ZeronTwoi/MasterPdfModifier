@@ -23,25 +23,15 @@ internal static class OcrSetup
     public static Overlay Highlight(OcrLine line) =>
         new(line.Bounds, line.Text, line, true, PdfOcr.Certainty(line) < PdfOcr.DoubtfulBelow);
 
-    /// <summary>Null when recognition can run; otherwise the reason it cannot, ready to show.</summary>
-    public static string? Problem(Services.Settings settings)
+    /// <summary>
+    /// The button a tool shows next to its note about what recognition lacks: it fetches that without a further
+    /// question and has the tool look again.
+    /// </summary>
+    public static ActionField Button(MainViewModel main) => new ActionField("SetupButton", () => main.RunBusy(async context =>
     {
-        var (available, detail) = PdfOcr.EngineStatus();
-        if (!available) return Loc.Get("ErrOcrUnavailable") + "\n" + detail;
-        // An external Tesseract brings its own language files; only the built-in engine depends on downloads.
-        if (!detail.Contains("built in")) return null;
-        var missing = TessData.Missing(settings.OcrLanguages);
-        return missing.Count == 0
-            ? null
-            : Loc.Format("ErrOcrLanguages", string.Join(", ", missing.Select(code => Languages.Get(code).NativeName)));
-    }
-
-    /// <summary>True when what stands in the way of recognition is language data that can be fetched.</summary>
-    public static bool CanDownload(Services.Settings settings)
-    {
-        var (available, detail) = PdfOcr.EngineStatus();
-        return available && detail.Contains("built in") && TessData.Missing(settings.OcrLanguages).Count > 0;
-    }
+        await main.Supplies.Ensure(context, confirmed: true);
+        main.RefreshWhenIdle();
+    }, false));
 
     public static string LanguageNames(IEnumerable<string> codes) => string.Join(", ", codes.Select(code => Languages.Get(code).NativeName));
 }

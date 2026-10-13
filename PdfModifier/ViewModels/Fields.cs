@@ -288,6 +288,10 @@ public partial class FileListField : Field
 public partial class InfoField(string text = "") : Field("")
 {
     [ObservableProperty] private string _text = text;
+
+    /// <summary>Shown with a warning sign and an outline: for the rare note that wants to be noticed.</summary>
+    [ObservableProperty] private bool _warns;
+
     private string? _key;
 
     protected override bool IsInput => false;

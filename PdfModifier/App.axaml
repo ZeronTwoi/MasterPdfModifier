@@ -1,7 +1,7 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="PdfModifier.App"
-             Name="PDF Modifier"
+             Name="Master PDF Modifier"
              RequestedThemeVariant="Default">
     <Application.Resources>
         <ResourceDictionary>
@@ -24,6 +24,8 @@
                     <SolidColorBrush x:Key="AccentSoft" Color="#E8EBFD" />
                     <SolidColorBrush x:Key="AccentText" Color="#3443C4" />
                     <SolidColorBrush x:Key="DangerBrush" Color="#C9334A" />
+                    <SolidColorBrush x:Key="WarningBrush" Color="#E39A0B" />
+                    <SolidColorBrush x:Key="WarningMark" Color="#2A1C00" />
                     <!-- Standard controls: flat, light fills and a quiet outline instead of the stock greys. -->
                     <SolidColorBrush x:Key="ButtonBackground" Color="#ECEEF3" />
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#E1E4EC" />
@@ -83,6 +85,8 @@
                     <SolidColorBrush x:Key="AccentSoft" Color="#262B4A" />
                     <SolidColorBrush x:Key="AccentText" Color="#AEB7FF" />
                     <SolidColorBrush x:Key="DangerBrush" Color="#F0647A" />
+                    <SolidColorBrush x:Key="WarningBrush" Color="#FFC247" />
+                    <SolidColorBrush x:Key="WarningMark" Color="#2A1C00" />
                     <SolidColorBrush x:Key="ButtonBackground" Color="#2A2E38" />
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#343946" />
                     <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#3D4352" />
@@ -187,6 +191,11 @@
             <Setter Property="Background" Value="{DynamicResource ControlFill}" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="11,9" />
+        </Style>
+        <!-- A note that wants attention: outlined in the colour of the warning sign it carries. -->
+        <Style Selector="Border.note.warns">
+            <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
         </Style>
         <Style Selector="Border.badge">
             <Setter Property="Background" Value="{DynamicResource AccentBrush}" />

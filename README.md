@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="PdfModifier/Assets/app.png" width="96" alt="PDF Modifier icon">
+  <img src="PdfModifier/Assets/app.png" width="96" alt="Master PDF Modifier icon">
 </p>
 
-<h1 align="center">PDF Modifier</h1>
+<h1 align="center">Master PDF Modifier</h1>
 
 <p align="center">
   A free, open-source desktop app for editing, organising, cleaning up and compressing PDF files.<br>
@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/cut-sheet.png" width="920" alt="The PDF Modifier window: the tools on the left, the page in the middle with four pages found on one scanned sheet, the settings of the tool on the right">
+  <img src="docs/images/cut-sheet.png" width="920" alt="The Master PDF Modifier window: the tools on the left, the page in the middle with four pages found on one scanned sheet, the settings of the tool on the right">
 </p>
 
 ## What it can do
@@ -42,9 +42,13 @@
 - **It says when it is not sure.** Where the app decides something by itself (where one page ends on a sheet, what a
   blurry line says), a slider sets how readily it decides, and what it doubts is marked red so you can check,
   correct or leave it out.
-- **Your files stay on your computer.** No account, no upload, no tracking. The only thing ever fetched from the
-  internet is language data for text recognition, from the official Tesseract repository, and only when you ask
-  for it.
+- **Your files stay on your computer.** No account, no upload, no tracking. The only things ever fetched from the
+  internet are what text recognition needs (language data from the official Tesseract project and, where it is
+  missing, the runtime or program it runs on), and only after the app has asked you.
+- **Nothing to set up by hand.** A setup that asks what a setup should ask, or one file to start as it is. What the
+  app needs beyond itself it fetches on its own, after asking; nobody has to open a command line.
+- **New versions, if you want to hear of them.** The app asks once. With a yes it takes one look per start and
+  puts a warning sign on the settings button when there is a newer version; with a no it never connects for this.
 - **Eight interface languages**: English, Español, Deutsch, Русский, Français, 日本語, Português and Türkçe. Light
   or dark follows the setting of your desktop.
 
@@ -93,29 +97,46 @@ limits worth knowing.
 
 ## Get it
 
-PDF Modifier is at version 0.1.0. There is no installer or ready-made download yet: for now it is built from the
-source, which takes the [.NET 10 SDK](https://dotnet.microsoft.com/download) and three lines:
+<p align="center">
+  <a href="https://github.com/ZeronTwoi/MasterPdfModifier/releases/latest/download/MasterPdfModifier-Setup.exe"><b>Download for Windows</b> (setup)</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/ZeronTwoi/MasterPdfModifier/releases/latest/download/MasterPdfModifier.deb"><b>Download for Linux</b> (.deb)</a>
+</p>
+<p align="center">
+  <a href="https://github.com/ZeronTwoi/MasterPdfModifier/releases/latest/download/MasterPdfModifier.exe">Windows, without installing</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/ZeronTwoi/MasterPdfModifier/releases/latest/download/MasterPdfModifier-Linux.tar.gz">Linux, other distributions</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/ZeronTwoi/MasterPdfModifier/releases">all versions</a>
+</p>
 
-```
-git clone https://github.com/ZeronTwoi/MasterPdfModifier.git
-cd MasterPdfModifier
-dotnet run --project PdfModifier
-```
-
-A build that runs on a computer without .NET, to keep or to pass on:
-
-```
-dotnet publish PdfModifier -c Release -r win-x64 --self-contained -o publish/win-x64
-dotnet publish PdfModifier -c Release -r linux-x64 --self-contained -o publish/linux-x64
-```
+Download it, start it, use it. There is no command line anywhere.
 
 | | Windows | Linux |
 | --- | --- | --- |
-| **Start it** | Run `PdfModifier.exe`. It carries its own name and icon; pin it to the task bar or the Start menu from its right-click menu. | Run `sh install.sh` in the unpacked folder. That adds PDF Modifier to the application menu with its icon and to "Open with" for PDF files, without root. `sh uninstall.sh` takes it out again. |
-| **Text recognition** | Built in. It needs the Microsoft Visual C++ runtime, which most computers already have. | Install Tesseract from your distribution, for example `sudo apt install tesseract-ocr`. Language packs installed that way are used directly. |
+| **Start it** | Run `MasterPdfModifier-Setup.exe`. The setup speaks the app's eight languages and asks where to install, whether you want a shortcut on the desktop and whether to offer the app under "Open with" for PDF files. It installs for you alone, so no administrator is needed, and the app can be removed again like any other. Rather not install anything? `MasterPdfModifier.exe` is the whole app in one file: double-click it, wherever it lies. | Debian, Ubuntu, Mint and their relatives: open `MasterPdfModifier.deb` and let the software centre install it; the app is in the application menu afterwards. Others: unpack the archive and start `MasterPdfModifier`; it offers to put itself into the application menu. |
+| **What it fetches by itself** | Language data for text recognition. On a freshly set-up Windows also the Microsoft Visual C++ runtime, which the text recognition is built on, straight from Microsoft. | Language data for text recognition. The Tesseract program, where it is not installed yet, from the distribution (the package brings it along). |
 
-Windows is where the app has been used most. The Linux build is made and packaged the same way but has been tried
-far less; reports of what works and what does not are welcome.
+<p align="center">
+  <img src="docs/images/setup.png" width="520" alt="The setup for Windows, asking whether to create a desktop shortcut and whether to offer the app under Open with for PDF files">
+</p>
+
+Windows may say that it does not know the setup or the app, because they are new and not signed: choose *More
+info*, then *Run anyway*.
+
+The app asks before it fetches anything and says what it is and where it comes from; after a yes it does the rest.
+"Not now" is a fine answer: everything but text recognition works without. The one-file app takes a few seconds
+longer at its very first start, because it unpacks what it is made of.
+
+**New versions.** The first time it is started the app asks whether it should tell you when a new version is out.
+With a yes it looks once each time it is started: a single request to GitHub that is answered with the number of the
+newest version, without anything about you or your documents in it. When there is a newer one, the settings button
+gets a warning sign and the settings say which version it is and lead to its download. With a no the app never
+connects for this, and it does not ask again; the settings have a box to change your mind.
+
+Every release is started by the build itself, on Windows and on Ubuntu, before it is handed out. Beyond that, Windows
+is where the app has been used most; Linux has been tried far less, and reports of what works and what does not are
+welcome.
 
 ## Using it
 
@@ -127,20 +148,39 @@ The [guide](docs/GUIDE.md) has the rest.
 
 ## For developers
 
+Building from the source takes the [.NET 10 SDK](https://dotnet.microsoft.com/download):
+
 ```
-dotnet build
+git clone https://github.com/ZeronTwoi/MasterPdfModifier.git
+cd MasterPdfModifier
+dotnet run --project PdfModifier
 dotnet test
 ```
 
 - `PdfModifier.Core` – all PDF work, no user interface. Every operation takes a document as bytes and returns a new
   one.
-- `PdfModifier` – the desktop app (Avalonia).
+- `PdfModifier` – the desktop app (Avalonia). Its program file is called `MasterPdfModifier`.
 - `PdfModifier.Tests` – unit tests for the core, and tests that drive the real window with mouse and keyboard
   without needing a screen.
-- `packaging/linux` – the application menu entry for Linux and the scripts that install and remove it.
+- `packaging` – what the Windows installer (Inno Setup) and the Linux package are made from, and the text that goes
+  with a release.
 - `docs` – the guide and the pictures on this page.
 
-The test suite generates its own documents. Three optional environment variables:
+**The downloads** are made by `.github/workflows/downloads.yml`. To publish a new version, raise `<Version>` in
+`PdfModifier/PdfModifier.csproj` and push to `main`: the tests run, the four downloads are built, each is tried
+(the installer by installing, starting and removing the app), and all are attached to a release named after the
+version. Apps that are told about new versions find it there. The one-file build can be made by hand, and asked
+whether it has all it needs:
+
+```
+dotnet publish PdfModifier -c Release -r win-x64 -p:PublishSingleFile=true -o publish
+publish/MasterPdfModifier.exe --check
+```
+
+The app keeps its settings in the user's configuration folder; `PDFMODIFIER_SETTINGS` names another file for them,
+for a copy that is carried around or for trying a first start again.
+
+The test suite generates its own documents. Four optional environment variables:
 
 - `PDFMODIFIER_TESSDATA` – a folder with `*.traineddata` files. Recognition tests run when the data is there and are
   skipped otherwise. The app honours the same variable, for example for a portable install.
@@ -148,9 +188,13 @@ The test suite generates its own documents. Three optional environment variables
   page were made that way.
 - `PDFMODIFIER_SAMPLES` – a folder to receive sample files for trying things by hand: a text document, scans, sheets
   with several pages, a page of paragraphs, a blurry scan.
+- `PDFMODIFIER_NETWORK` – set to anything, lets the one test run that downloads for real: it fetches Microsoft's
+  installer of the Visual C++ runtime (some 25 MB) and checks its signature, without running it.
 
 A tool that fails tells the user so in a message box. Without a screen nobody can close it, so the window tests only
-drive what succeeds; `dotnet test --blame-hang --blame-hang-timeout 200s` ends a run that hangs all the same.
+drive what succeeds; `dotnet test --blame-hang --blame-hang-timeout 200s` ends a run that hangs all the same. For
+the same reason the app asks its questions about fetching things only when it was started as a program: in the tests
+nobody is there to answer, and they put their own answers in place.
 
 ## Feedback
 
@@ -159,12 +203,12 @@ say what kind of PDF it was (typed, scanned, or both) and what you expected to h
 
 ## Licence
 
-PDF Modifier is released under the [MIT licence](LICENSE): free to use, change and pass on, also commercially, as
+Master PDF Modifier is released under the [MIT licence](LICENSE): free to use, change and pass on, also commercially, as
 long as the licence text stays with it.
 
 ## Built on
 
-PDF Modifier stands on the work of these open-source projects. None of them is a paid or restricted product; each
+Master PDF Modifier stands on the work of these open-source projects. None of them is a paid or restricted product; each
 remains under its own licence, which asks for the credit given here.
 
 | Project | What it does here | Licence |
@@ -182,7 +226,9 @@ remains under its own licence, which asks for the credit given here.
 | [.NET](https://github.com/dotnet/runtime) | The runtime the app runs on, included in the self-contained builds | MIT |
 
 The full list, with the smaller parts these bring along, is in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md); it
-travels with every build. Fonts are not included: new text uses the fonts installed on the computer.
+travels with every build. Fonts are not included: new text uses the fonts installed on the computer. Two things the
+app may fetch for text recognition are not part of it either and stay under their owners' terms: the Microsoft
+Visual C++ runtime, downloaded from Microsoft, and on Linux the Tesseract program, installed from the distribution.
 
-PDF Modifier is an independent project. It is not affiliated with or endorsed by any of the projects and companies
+Master PDF Modifier is an independent project. It is not affiliated with or endorsed by any of the projects and companies
 named here; their names are used only to say what the app is built on.

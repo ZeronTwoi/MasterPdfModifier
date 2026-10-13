@@ -11,22 +11,36 @@
         <Version>0.1.0</Version>
     </PropertyGroup>
 
-    <!-- What the program shows of itself outside its window: in a folder, on the task bar, in the task manager. -->
+    <!-- What the program shows of itself outside its window: in a folder, on the task bar, in the task manager.
+         The program file carries the name of the app; the project and its namespaces keep the shorter one. -->
     <PropertyGroup>
+        <AssemblyName>MasterPdfModifier</AssemblyName>
+        <RootNamespace>PdfModifier</RootNamespace>
         <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-        <AssemblyTitle>PDF Modifier</AssemblyTitle>
-        <Product>PDF Modifier</Product>
+        <AssemblyTitle>Master PDF Modifier</AssemblyTitle>
+        <Product>Master PDF Modifier</Product>
         <Description>Edit, organise, clean up and compress PDF files</Description>
-        <Company>PDF Modifier contributors</Company>
-        <Copyright>Copyright © 2026 PDF Modifier contributors</Copyright>
+        <Company>Master PDF Modifier contributors</Company>
+        <Copyright>Copyright © 2026 Master PDF Modifier contributors</Copyright>
+    </PropertyGroup>
+
+    <!-- The downloads (see .github/workflows/release.yml): one file that starts on a double click, without .NET
+         being installed. Everything it is made of is packed into it and unpacked into the temp folder the first
+         time it runs, because the text recognition engine has to find its libraries as files on disk. -->
+    <PropertyGroup Condition="'$(PublishSingleFile)' == 'true'">
+        <SelfContained>true</SelfContained>
+        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+        <DebugType>none</DebugType>
     </PropertyGroup>
 
     <ItemGroup>
         <InternalsVisibleTo Include="PdfModifier.Tests" />
     </ItemGroup>
 
+    <!-- The icon of the window, and what a Linux menu entry is given for an icon (Services/DesktopEntry). -->
     <ItemGroup>
-        <AvaloniaResource Include="Assets\app.ico" />
+        <AvaloniaResource Include="Assets\app.ico;Assets\app.png;Assets\app.svg" />
     </ItemGroup>
 
     <!-- Every build that is handed on carries the licence and the list of what it is built on, as their terms ask. -->
@@ -35,13 +49,15 @@
         <None Include="..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
 
-    <!-- A Linux build brings along what puts it into the application menu: the entry, its icon and the scripts
-         that install and remove both (see packaging/linux). -->
-    <ItemGroup Condition="'$(RuntimeIdentifier)' != '' And $(RuntimeIdentifier.StartsWith('linux'))">
-        <None Include="..\packaging\linux\*" Link="%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
-        <None Include="Assets\app.png" Link="pdfmodifier.png" CopyToPublishDirectory="PreserveNewest" />
-        <None Include="Assets\app.svg" Link="pdfmodifier.svg" CopyToPublishDirectory="PreserveNewest" />
-    </ItemGroup>
+    <!-- The text recognition engine comes as libraries for Windows, 32-bit in one folder and 64-bit in another.
+         A build for one kind of computer carries the one it can use and leaves the others out. -->
+    <Target Name="LeaveOutForeignEngine" AfterTargets="ComputeResolvedFilesToPublishList" Condition="'$(RuntimeIdentifier)' != ''">
+        <ItemGroup>
+            <ForeignEngine Include="@(ResolvedFileToPublish)" Condition="'$(RuntimeIdentifier)' != 'win-x86' And $([System.String]::Copy('%(RelativePath)').StartsWith('x86'))" />
+            <ForeignEngine Include="@(ResolvedFileToPublish)" Condition="'$(RuntimeIdentifier)' != 'win-x64' And $([System.String]::Copy('%(RelativePath)').StartsWith('x64'))" />
+            <ResolvedFileToPublish Remove="@(ForeignEngine)" />
+        </ItemGroup>
+    </Target>
 
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="11.3.22" />

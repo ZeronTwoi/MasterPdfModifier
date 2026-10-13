@@ -293,6 +293,8 @@ public sealed class SheetTool : Tool
     /// <summary>Reads the page numbers printed on the pages of a sheet, in the background.</summary>
     private async void ReadNumbers(Plan plan)
     {
+        // What could not be read for want of text recognition can be, once that has been set up.
+        if (plan.Numbers == Numbers.Unavailable && _main.Supplies.Lack() == null) plan.Numbers = Numbers.Unread;
         if (plan.Numbers is Numbers.Read or Numbers.Reading or Numbers.Unavailable || plan.Pieces.Count < 2 || plan.Skip) return;
         if (_main.Session.View is not { } view) return;
         plan.Reading?.Cancel();
@@ -312,6 +314,7 @@ public sealed class SheetTool : Tool
         catch (OcrException)
         {
             plan.Numbers = Numbers.Unavailable;
+            _main.Supplies.Offer();
         }
         catch (Exception e) when (e is OperationCanceledException or ObjectDisposedException)
         {

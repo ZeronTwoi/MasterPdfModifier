@@ -107,12 +107,16 @@ public partial class MainViewModel : LocalizedObject
     [ObservableProperty] private string _toolSearch = "";
     [ObservableProperty] private bool _noToolListed;
 
+    /// <summary>The number of a newer version of the app, once the look at start-up has found one.</summary>
+    [ObservableProperty] private string? _newVersion;
+
     private readonly string _dragFolder = Path.Combine(Path.GetTempPath(), "PdfModifier", "pages-" + Guid.NewGuid().ToString("N"));
     private int _dragCount;
 
     public MainViewModel(Settings settings)
     {
         Settings = settings;
+        Supplies = new OcrSupplies(this);
         Tools = ToolCatalog.Create(this);
         string? group = null;
         foreach (var tool in Tools)
@@ -134,6 +138,33 @@ public partial class MainViewModel : LocalizedObject
 
     /// <summary>Set by the window once it exists.</summary>
     public Dialogs Dialogs { get; set; } = null!;
+
+    /// <summary>Fetches what text recognition lacks on this computer, after asking.</summary>
+    public OcrSupplies Supplies { get; }
+
+    /// <summary>Looks for a newer version of the app, for a user who wants to be told.</summary>
+    public UpdateCheck Updates { get; } = new();
+
+    public bool HasNewVersion => NewVersion != null;
+
+    /// <summary>What the settings button says of itself: with a newer version out, that comes first.</summary>
+    public string SettingsTip => NewVersion is { } version ? Loc.Format("UpdateAvailable", version, AppInfo.Version) : Loc.Get("ToolSettings");
+
+    partial void OnNewVersionChanged(string? value)
+    {
+        OnPropertyChanged(nameof(HasNewVersion));
+        OnPropertyChanged(nameof(SettingsTip));
+    }
+
+    /// <summary>
+    /// The one look for a newer version that a start of the app makes, if the user wants to be told. What it finds
+    /// shows as a warning sign on the settings button and as a note in the settings.
+    /// </summary>
+    public async Task LookForNewVersion()
+    {
+        NewVersion = await Updates.LookOnce(Settings, AppInfo.Version);
+        if (SelectedTool is SettingsTool) await RefreshTool();
+    }
 
     /// <summary>Device pixels per layout unit of the screen the window is on; pages are rendered that much sharper.</summary>
     public double RenderScaling { get; set; } = 1;
