@@ -132,6 +132,10 @@ jobs:
           xvfb-run -a timeout 25 masterpdfmodifier || status=$?
           echo "The window was closed after 25 seconds (status $status)." | tee -a check-linux.txt
           test "$status" -eq 124
+      - name: Test how the app updates itself here
+        # The whole suite runs on Windows. What an update does on Linux (the program taken out of the archive,
+        # made startable and put in the place of the running one) can only be tried on Linux.
+        run: dotnet test PdfModifier.Tests --filter "FullyQualifiedName~UpdateInstallTests" --blame-hang --blame-hang-timeout 300s
       - uses: actions/upload-artifact@v4
         with:
           name: linux
