@@ -145,6 +145,12 @@ public partial class MainViewModel : LocalizedObject
     /// <summary>Looks for a newer version of the app, for a user who wants to be told.</summary>
     public UpdateCheck Updates { get; } = new();
 
+    /// <summary>Puts that newer version in the place of this one, when the button for it is pressed.</summary>
+    public Updater Updater { get; } = new();
+
+    /// <summary>Closes the app. Set by the program once the window exists; an update ends with it.</summary>
+    public Action? Quit { get; set; }
+
     public bool HasNewVersion => NewVersion != null;
 
     /// <summary>What the settings button says of itself: with a newer version out, that comes first.</summary>

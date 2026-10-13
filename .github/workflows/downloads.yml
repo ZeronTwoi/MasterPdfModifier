@@ -67,6 +67,8 @@ jobs:
           $run = Start-Process dist/MasterPdfModifier.exe -ArgumentList '--check' -Wait -PassThru -RedirectStandardOutput check-windows.txt
           Get-Content check-windows.txt
           if ($run.ExitCode -ne 0) { throw "The download does not work (exit code $($run.ExitCode))." }
+          # It has to know what it is: a newer version is put in its place by fetching this same download.
+          if (-not (Select-String -Path check-windows.txt -SimpleMatch 'Updates: OneFile, from MasterPdfModifier.exe' -Quiet)) { throw 'The one-file app does not know how it is updated.' }
       - name: Build the installer
         shell: pwsh
         run: |
@@ -80,28 +82,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'The installer could not be built.' }
       - name: Try the installer
         shell: pwsh
-        run: |
-          # Installed without a word and with every box ticked, the way most people will have it.
-          $setup = Start-Process dist/MasterPdfModifier-Setup.exe -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS=desktopicon,openwith', "/LOG=$PWD\setup.log" -Wait -PassThru
-          if ($setup.ExitCode -ne 0) { Get-Content setup.log -Tail 40; throw "Setup failed (exit code $($setup.ExitCode))." }
-          $folder = "$env:LOCALAPPDATA\Programs\Master PDF Modifier"
-          $installed = "$folder\MasterPdfModifier.exe"
-          $run = Start-Process $installed -ArgumentList '--check' -Wait -PassThru -RedirectStandardOutput check-installed.txt
-          Get-Content check-installed.txt
-          if ($run.ExitCode -ne 0) { throw 'The installed app does not work.' }
-          $shortcuts = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Master PDF Modifier.lnk", "$([Environment]::GetFolderPath('Desktop'))\Master PDF Modifier.lnk"
-          foreach ($shortcut in $shortcuts) { if (-not (Test-Path $shortcut)) { throw "Missing: $shortcut" } }
-          if (-not (Get-ItemProperty 'HKCU:\Software\Classes\.pdf\OpenWithProgids' -Name 'MasterPdfModifier.pdf' -ErrorAction SilentlyContinue)) { throw 'The app is not offered for PDF files.' }
-          $entry = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' | Where-Object DisplayName -eq 'Master PDF Modifier'
-          if (-not $entry) { throw 'The app is not among the installed apps.' }
-          # And taken away again: nothing of it may stay behind.
-          Start-Process "$folder\unins000.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait
-          $deadline = (Get-Date).AddSeconds(60)
-          while ((Test-Path $folder) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 1 }
-          $left = @($folder) + $shortcuts | Where-Object { Test-Path $_ }
-          if (Get-ItemProperty 'HKCU:\Software\Classes\.pdf\OpenWithProgids' -Name 'MasterPdfModifier.pdf' -ErrorAction SilentlyContinue) { $left += 'the entry under Open with' }
-          if ($left) { throw "Removing the app left behind: $($left -join ', ')" }
-          "Version $($entry.DisplayVersion) installed and started; found in the Start menu, on the desktop, under Open with and among the installed apps; removed again without a trace." | Tee-Object -Append check-installed.txt
+        # Installed, updated the way the app updates itself, changed by running the setup again, and removed:
+        # nothing of it may stay behind.
+        run: ./packaging/windows/try-setup.ps1 dist/MasterPdfModifier-Setup.exe check-installed.txt
       - uses: actions/upload-artifact@v4
         with:
           name: windows
@@ -132,6 +115,8 @@ jobs:
           mkdir alone
           tar -xzf dist/MasterPdfModifier-Linux.tar.gz -C alone
           alone/MasterPdfModifier --check | tee check-linux.txt
+          # It has to know what it is: a newer version is put in its place by fetching this same download.
+          grep -q 'Updates: OneFile, from MasterPdfModifier-Linux.tar.gz' check-linux.txt
       - name: Try the package
         shell: bash
         run: |
@@ -141,6 +126,7 @@ jobs:
           # Installed, the app has text recognition from the first start: the package brings Tesseract along.
           masterpdfmodifier --check | tee -a check-linux.txt
           masterpdfmodifier --check | grep -q '^ok    Text recognition'
+          masterpdfmodifier --check | grep -q 'Updates: Package'
           # And its window comes up and stays: it is still running when the time is over.
           status=0
           xvfb-run -a timeout 25 masterpdfmodifier || status=$?
@@ -172,7 +158,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' PdfModifier/PdfModifier.csproj | head -n 1)
-          set -- built/windows/dist/MasterPdfModifier-Setup.exe built/windows/dist/MasterPdfModifier.exe built/linux/dist/MasterPdfModifier.deb built/linux/dist/MasterPdfModifier-Linux.tar.gz
+          mkdir release
+          cp built/windows/dist/MasterPdfModifier-Setup.exe built/windows/dist/MasterPdfModifier.exe built/linux/dist/MasterPdfModifier.deb built/linux/dist/MasterPdfModifier-Linux.tar.gz release/
+          # The checksum of every download. An app that updates itself checks what it fetched against this list
+          # before it starts it (PdfModifier/Services/Updater.cs), and anyone else can do the same by hand.
+          (cd release && sha256sum MasterPdfModifier-Setup.exe MasterPdfModifier.exe MasterPdfModifier.deb MasterPdfModifier-Linux.tar.gz > SHA256SUMS.txt)
+          cat release/SHA256SUMS.txt
+          set -- release/MasterPdfModifier-Setup.exe release/MasterPdfModifier.exe release/MasterPdfModifier.deb release/MasterPdfModifier-Linux.tar.gz release/SHA256SUMS.txt
           if gh release view "v$version" >/dev/null 2>&1; then
             gh release upload "v$version" "$@" --clobber
           else

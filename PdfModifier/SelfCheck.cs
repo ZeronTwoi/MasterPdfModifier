@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using PdfModifier.Core.Operations;
+using PdfModifier.Services;
 using SkiaSharp;
 
 namespace PdfModifier;
@@ -52,6 +53,10 @@ internal static class SelfCheck
         // Not a failure: the app offers to fetch what text recognition lacks when it is first asked for.
         var (available, detail) = PdfOcr.EngineStatus();
         output.WriteLine(available ? $"ok    Text recognition: {detail}" : $"note  Text recognition: {detail}");
+
+        // How this copy would put a newer version in its own place, which goes by how it came onto the computer.
+        var updater = new Updater();
+        output.WriteLine($"note  Updates: {updater.Installed.Kind}, {(updater.CanUpdate ? "from " + updater.Asset : "by hand")}");
         output.WriteLine(failed ? "Something the app needs is not working." : "Everything the app needs is working.");
         return failed ? 1 : 0;
     }

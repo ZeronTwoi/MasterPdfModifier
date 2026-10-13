@@ -25,6 +25,7 @@ public class App : Application
 
             // With a person in front of the window, what text recognition lacks is fetched after asking them.
             viewModel.Supplies.Ask = question => viewModel.Dialogs.Confirm(question, Loc.Get("SetupYes"), Loc.Get("SetupNo"));
+            viewModel.Quit = () => desktop.Shutdown();
 
             // Files passed on the command line (e.g. "Open with") are opened once the window is up: a PDF as the
             // document, pictures as the pages of a new one.
@@ -33,12 +34,27 @@ public class App : Application
             {
                 if (files.Count > 0) await viewModel.DropFiles(files);
                 else if (DesktopEntry.IsSupported) await OfferMenuEntry(viewModel);
+                NoteNewVersion(viewModel);
                 await AskAboutUpdates(viewModel);
                 await viewModel.LookForNewVersion();
             };
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>
+    /// The first start after an update says so in the status line: the one sign that it went through, since the app
+    /// looks the same as before.
+    /// </summary>
+    private static void NoteNewVersion(MainViewModel viewModel)
+    {
+        var settings = viewModel.Settings;
+        if (settings.LastVersion == AppInfo.Version) return;
+        if (settings.LastVersion is { } before && UpdateCheck.IsNewer(AppInfo.Version, before))
+            viewModel.StatusText = Loc.Format("StatusUpdated", AppInfo.Version);
+        settings.LastVersion = AppInfo.Version;
+        settings.Save();
     }
 
     /// <summary>

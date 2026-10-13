@@ -50,11 +50,14 @@ public class UpdateCheckTests
         var (check, asked) = Answering(Newest + "0.2.0");
         var settings = new Settings { UpdateNotice = true };
 
+        Assert.Null(check.Page);
         Assert.Equal("0.2.0", await check.LookOnce(settings, "0.1.0"));
         // Asked again while the app runs, it answers from memory.
         Assert.Equal("0.2.0", await check.LookOnce(settings, "0.1.0"));
 
         Assert.Equal([AppInfo.LatestVersionPage], asked);
+        // The page of that version is kept: it says what is new, and its downloads are what an update is made from.
+        Assert.Equal(Newest + "0.2.0", check.Page);
     }
 
     [Theory]
@@ -117,6 +120,8 @@ public class UpdateCheckTests
         var (window, vm) = Start();
         vm.Settings.UpdateNotice = true;
         vm.Updates.Redirect = (_, _) => Task.FromResult<string?>(Newest + "9.4.0");
+        // As the app is when the setup put it on a computer: it can put the newer version in its own place.
+        (vm.Updater.Installed, vm.Updater.Windows) = (new Installation(InstallKind.Setup, "MasterPdfModifier.exe"), true);
         using var scan = TestPdf.FakeScan(1240, 1754);
         vm.Session.Open(TestPdf.FromImage(scan, 150), null);
         await Settle();
@@ -134,6 +139,7 @@ public class UpdateCheckTests
         var note = settings.Fields.OfType<InfoField>().First();
         Assert.True(note.Warns);
         Assert.Contains("9.4.0", note.Text);
+        Assert.True(Field<ActionField>(settings, "UpdateInstall").IsVisible);
         Assert.True(Field<ActionField>(settings, "UpdateGet").IsVisible);
         Assert.True(Field<BoolField>(settings, "UpdateNotify").Value);
         Capture(window, "42-update-in-settings");
@@ -178,6 +184,7 @@ public class UpdateCheckTests
         Assert.False(vm.HasNewVersion);
         Assert.Equal(Strings.English["ToolSettings"], vm.SettingsTip);
         Assert.False(settings.Fields.OfType<InfoField>().First().HasText);
+        Assert.False(Field<ActionField>(settings, "UpdateInstall").IsVisible);
         Assert.False(Field<ActionField>(settings, "UpdateGet").IsVisible);
         window.Close();
     }

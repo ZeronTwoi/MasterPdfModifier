@@ -16,6 +16,7 @@ The short version is on the [main page](../README.md).
 - [Languages](#languages)
 - [What the app fetches by itself](#what-the-app-fetches-by-itself)
 - [New versions](#new-versions)
+- [Removing the app](#removing-the-app)
 - [Getting around](#getting-around)
 - [Good to know](#good-to-know)
 
@@ -247,11 +248,53 @@ The first time the app is started it asks whether it should tell you when a new 
 - **No**, or closing the question: the app never connects for this, and it does not ask again.
 
 When there is a newer version, the settings button at the top gets a warning sign. Settings then say which version
-is out and which one you have, and **Open the download page** leads to it; installing the new version over the old
-one keeps your settings. The box *Tell me when a new version is out* in Settings changes your answer at any time;
-it counts from the next start of the app.
+is out and which one you have, with two buttons under it:
 
-<img src="images/update-notice.png" width="820" alt="The warning sign on the settings button, and the note in Settings that a newer version is out">
+- **Update now** puts the new version in the place of the one you have. The app fetches it from GitHub, checks it
+  against the checksums published with that version, hands over to it and closes; a moment later it is open again
+  as the new version, with the document you had open, and the line at the bottom says *Updated to version …*. Your
+  settings stay as they are. Nothing is fetched before the button is pressed.
+- **See what is new** opens the page of that version, which says what changed and has the downloads for whoever
+  would rather install it by hand.
+
+The app closes for an update, so it does not start one over work that is not saved: it says so under the note and
+waits for you to save and press again. The same goes for a second window of the app that is still open. A download
+that is not the file that was published is deleted and never started.
+
+What happens when the button is pressed goes by how the app came onto the computer. Installed by the Windows setup,
+the new setup is run; it asks nothing, shows its progress and keeps the choices you made the first time. The
+one-file app replaces its own file. The Linux package is installed through the package manager, which asks for your
+password. A copy that is none of the downloads, a build from the source for one, only has *See what is new*.
+
+The box *Tell me when a new version is out* in Settings changes your answer at any time; it counts from the next
+start of the app.
+
+<img src="images/update-notice.png" width="820" alt="The warning sign on the settings button, the note in Settings that a newer version is out, and the buttons Update now and See what is new">
+
+## Removing the app
+
+**Windows, installed by the setup.** Remove it like any other app: *Settings › Apps › Installed apps › Master PDF
+Modifier › Uninstall* (or *Add or remove programs*). An app that is still open is not removed; you are asked to
+close it first. What goes:
+
+- the program and its folder, the shortcuts in the Start menu and on the desktop, and pins on the taskbar;
+- its entry among the installed apps and under "Open with" for PDF files, and what Windows noted about it by itself;
+- what it left in the temp folder: undo histories of runs that ended badly, pages that were dragged out, downloads;
+- your settings and the downloaded language data, if you say yes when asked. Say no to keep them for a later
+  installation.
+
+After a yes, nothing of the app is left on the computer. Your documents are never touched.
+
+**Windows, the one-file app.** Nothing was installed, so there is nothing to uninstall: delete the file. It kept its
+settings in `%APPDATA%\PdfModifier` and language data in `%LOCALAPPDATA%\PdfModifier`; delete those two folders
+too if you want nothing left. What it unpacked of itself lies in the temp folder, under `.net\MasterPdfModifier`;
+Windows' own clean-up of temporary files takes it away, or delete that folder as well.
+
+**Linux.** Remove the package in the software centre. An app started from the unpacked archive is removed by
+deleting it; take out its menu entry first, with the button in Settings.
+
+While it is in use the app tidies up after itself as well: each start clears away what an earlier run or an older
+version left in the temp folder, as long as no other window of the app is open that could still need it.
 
 ## Getting around
 
