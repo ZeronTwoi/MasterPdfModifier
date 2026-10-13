@@ -172,6 +172,21 @@ public static class LinuxPackages
         return install == null ? null : new Command("pkexec", install);
     }
 
+    /// <summary>
+    /// How a package file that was downloaded is installed here (a newer version of the app itself), or null where
+    /// there is no way to: no pkexec, or a distribution that does not take such packages.
+    /// </summary>
+    public static Command? ForPackageFile(string file) => OperatingSystem.IsLinux() ? ForPackageFile(file, OnPath) : null;
+
+    internal static Command? ForPackageFile(string file, Func<string, bool> has)
+    {
+        if (!has("pkexec")) return null;
+        // apt-get also fetches what a newer version may depend on; dpkg alone only puts the package in place.
+        return has("apt-get") ? new Command("pkexec", ["env", "DEBIAN_FRONTEND=noninteractive", "apt-get", "install", "-y", file])
+            : has("dpkg") ? new Command("pkexec", ["dpkg", "-i", file])
+            : null;
+    }
+
     /// <summary>Runs the command and waits for it. True when it reports success.</summary>
     public static async Task<bool> RunAsync(Command command, CancellationToken cancel = default)
     {

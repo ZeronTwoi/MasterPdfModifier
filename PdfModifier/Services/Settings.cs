@@ -32,6 +32,12 @@ public sealed class Settings
     public bool? UpdateNotice { get; set; }
 
     /// <summary>
+    /// The version of the app that was started last, so that the first start of a newer one can say that the update
+    /// went through.
+    /// </summary>
+    public string? LastVersion { get; set; }
+
+    /// <summary>
     /// Linux: the question whether to put the app into the application menu has been asked. It is asked once; the
     /// settings have a button for a later yes.
     /// </summary>

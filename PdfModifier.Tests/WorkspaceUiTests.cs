@@ -469,7 +469,7 @@ public class WorkspaceUiTests
     {
         var (window, vm) = Start();
         await Settle();
-        Assert.Equal(5, vm.ToolGroups.Count);
+        Assert.Equal(6, vm.ToolGroups.Count);
         Assert.Equal(vm.Tools, vm.ToolGroups.SelectMany(group => group.Tools));
         Assert.True(vm.SelectedTool.IsSelected);
 

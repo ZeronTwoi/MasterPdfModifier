@@ -111,7 +111,12 @@ internal static unsafe class Native
     [DllImport(Lib)] public static extern nint FPDFBookmark_GetFirstChild(nint document, nint bookmark);
     [DllImport(Lib)] public static extern nint FPDFBookmark_GetNextSibling(nint document, nint bookmark);
     [DllImport(Lib)] public static extern nint FPDFBookmark_GetDest(nint document, nint bookmark);
+    [DllImport(Lib)] public static extern CULong FPDFBookmark_GetTitle(nint bookmark, void* buffer, CULong buflen);
+    [DllImport(Lib)] public static extern int FPDFBookmark_GetCount(nint bookmark);
+    [DllImport(Lib)] public static extern nint FPDFBookmark_GetAction(nint bookmark);
+    [DllImport(Lib)] public static extern nint FPDFAction_GetDest(nint document, nint action);
     [DllImport(Lib)] public static extern int FPDFDest_GetDestPageIndex(nint document, nint dest);
+    [DllImport(Lib)] public static extern int FPDFDest_GetLocationInPage(nint dest, int* hasX, int* hasY, int* hasZoom, float* x, float* y, float* zoom);
     [DllImport(Lib)] public static extern CULong FPDF_GetMetaText(nint document, [MarshalAs(UnmanagedType.LPUTF8Str)] string tag, void* buffer, CULong buflen);
 
     // ---- fpdf_edit.h ----
@@ -160,6 +165,8 @@ internal static unsafe class Native
     [DllImport(Lib)] public static extern int FPDFPageObj_SetFillColor(nint pageObject, uint r, uint g, uint b, uint a);
     [DllImport(Lib)] public static extern int FPDFPageObj_GetFillColor(nint pageObject, uint* r, uint* g, uint* b, uint* a);
     [DllImport(Lib)] public static extern int FPDFPath_SetDrawMode(nint path, int fillMode, int stroke);
+    [DllImport(Lib)] public static extern int FPDFPageObj_SetStrokeColor(nint pageObject, uint r, uint g, uint b, uint a);
+    [DllImport(Lib)] public static extern int FPDFPageObj_SetStrokeWidth(nint pageObject, float width);
     [DllImport(Lib)] public static extern int FPDFText_SetText(nint textObject, [MarshalAs(UnmanagedType.LPWStr)] string text);
     [DllImport(Lib)] public static extern nint FPDFText_LoadFont(nint document, byte* data, uint size, int fontType, int cid);
     [DllImport(Lib)] public static extern nint FPDFText_LoadStandardFont(nint document, [MarshalAs(UnmanagedType.LPUTF8Str)] string font);

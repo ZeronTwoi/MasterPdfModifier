@@ -117,23 +117,28 @@ public sealed class SettingsTool : Tool
     private readonly CheckListField _ocrLanguages;
     private readonly BoolField _autoDetect, _notify;
     private readonly InfoField _engine, _update;
-    private readonly ActionField _setup, _menuAdd, _menuRemove, _getUpdate;
+    private readonly ActionField _setup, _menuAdd, _menuRemove, _install, _getUpdate;
     private readonly MainViewModel _main;
     private bool _syncing;
+
+    // What stands in the way of the update that was asked for, said under the note about it rather than in a window.
+    private string? _updateHint;
 
     public SettingsTool(MainViewModel main) : base("Settings", "GroupApp")
     {
         _main = main;
         var settings = main.Settings;
 
-        // Only there when a newer version is out: what it is, and the way to it.
+        // Only there when a newer version is out: what it is, the button that puts it in place, and the page that
+        // says what is new in it, which is also where it can be had by hand.
         _update = Add(new InfoField { Warns = true });
+        _install = Add(new ActionField("UpdateInstall", InstallUpdate) { Icon = Controls.Icons.Drop });
         _getUpdate = Add(new ActionField("UpdateGet", () =>
         {
-            Process.Start(new ProcessStartInfo(AppInfo.LatestVersionPage) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(main.Updates.Page ?? AppInfo.LatestVersionPage) { UseShellExecute = true });
             return Task.CompletedTask;
         }));
-        _getUpdate.IsVisible = false;
+        _install.IsVisible = _getUpdate.IsVisible = false;
 
         _language = Add(new ChoiceField("SettingsLanguage", Languages.All.Select(l => new Choice(l.Code, l.NativeName, true)).ToArray()));
         _language.Select(settings.UiLanguage);
@@ -209,8 +214,57 @@ public sealed class SettingsTool : Tool
 
     private void RefreshUpdateNote()
     {
-        _update.SetText(_main.NewVersion is { } version ? Loc.Format("UpdateAvailable", version, AppInfo.Version) : "");
+        var note = _main.NewVersion is { } version ? Loc.Format("UpdateAvailable", version, AppInfo.Version) : "";
+        _update.SetText(note.Length > 0 && _updateHint is { } hint ? note + "\n" + Loc.Format(hint, AppInfo.Name) : note);
+        _install.IsVisible = _main.HasNewVersion && _main.Updater.CanUpdate;
         _getUpdate.IsVisible = _main.HasNewVersion;
+    }
+
+    /// <summary>
+    /// The button that updates: fetches the newer version, checks it, hands over to it and closes the app, which
+    /// starts again as the new one with the document that was open.
+    /// </summary>
+    private async Task InstallUpdate()
+    {
+        if (_main.IsBusy || _main.NewVersion is not { } version || _main.Updates.Page is not { } page) return;
+
+        // The app closes for this. Nothing may be lost to an update, so what is not saved has to be saved first,
+        // by the user and not by a guess of the app; and no other window may be working with the program.
+        await _main.FlushTool();
+        _updateHint = _main.Session is { HasDocument: true, IsDirty: true } ? "UpdateSaveFirst"
+            : _main.Updater.OthersOpen ? "UpdateCloseOthers"
+            : null;
+        RefreshUpdateNote();
+        if (_updateHint != null) return;
+
+        var handedOver = false;
+        await _main.RunBusy(async context =>
+        {
+            context.Status(Loc.Format("UpdateDownloading", version));
+            ReadyUpdate ready;
+            try
+            {
+                ready = await _main.Updater.Prepare(page, version, context.Progress, context.Cancel);
+            }
+            catch (InvalidDataException)
+            {
+                throw new UserException(Loc.Get("UpdateUnverified"));
+            }
+
+            context.Status(Loc.Format("UpdateInstalling", version));
+            try
+            {
+                await _main.Updater.Apply(ready, _main.Session.FilePath, context.Cancel);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+            {
+                // A folder that cannot be written to, a password that was not given: the page has it for doing by hand.
+                throw new UserException(Loc.Format("UpdateFailed", e.Message));
+            }
+
+            handedOver = true;
+        }, false);
+        if (handedOver) _main.Quit?.Invoke();
     }
 
     private void RefreshLanguageList()
@@ -270,10 +324,12 @@ public static class ToolCatalog
         new PageNumbersTool(main),
         new FlattenTool(),
         new MetadataTool(main),
+        new BookmarksTool(main),
 
         new MergeTool(main),
         new SplitTool(),
         new SheetTool(main),
+        new PerSheetTool(),
         new RotateTool(main),
         new DeleteTool(),
         new ReorderTool(main),
@@ -287,7 +343,12 @@ public static class ToolCatalog
         new OcrTool(main),
         new AutomateTool(main),
 
+        new SearchTool(main),
+        new CopyTool(main),
+        new PicturesTool(main),
+
         new CompareTool(main),
+        new ArchiveTool(main),
         new ProtectTool(),
 
         new SettingsTool(main)

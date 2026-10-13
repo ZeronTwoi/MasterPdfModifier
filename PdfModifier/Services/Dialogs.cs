@@ -19,6 +19,8 @@ public sealed class Dialogs(Window owner)
         Patterns = ["*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp", "*.gif"]
     };
 
+    public static FilePickerFileType TextFiles => new(Loc.Get("FilterText")) { Patterns = ["*.txt"], MimeTypes = ["text/plain"] };
+
     /// <summary>Whatever can be added to a document as pages.</summary>
     public static FilePickerFileType PageFiles => new(Loc.Get("FilterPages"))
     {

@@ -59,6 +59,9 @@ public partial class TextField(string labelKey, string value = "", bool multilin
 
     protected override bool IsSetting(string property) => property is not (nameof(Reveal) or nameof(PasswordChar));
 
+    /// <summary>What pressing Enter in the field does, for a field that is the start of something (a search). Null: nothing.</summary>
+    public Action? Submit { get; set; }
+
     /// <summary>Asks the view to put the keyboard focus into this field.</summary>
     public event Action? FocusRequested;
 
@@ -598,6 +601,72 @@ public sealed partial class PieceListField(string labelKey) : Field(labelKey)
 
     [RelayCommand]
     private void Choose(PieceItem item) => Chosen?.Invoke(item);
+}
+
+/// <summary>One row of a <see cref="ListField"/>: a line of text, a smaller one under it, and what the owner of the list ties to it.</summary>
+public sealed partial class ListItem(object source) : ObservableObject
+{
+    [ObservableProperty] private string _title = "";
+    [ObservableProperty] private string _detail = "";
+
+    /// <summary>Shown in red: something that wants a look before it is relied on.</summary>
+    [ObservableProperty] private bool _warns;
+
+    /// <summary>How far in the row stands, for an entry that belongs under the one before it.</summary>
+    [ObservableProperty] private int _level;
+
+    public object Source => source;
+    public bool HasDetail => Detail.Length > 0;
+    public Avalonia.Thickness Indent => new(Level * 14, 0, 0, 0);
+
+    partial void OnDetailChanged(string value) => OnPropertyChanged(nameof(HasDetail));
+
+    partial void OnLevelChanged(int value) => OnPropertyChanged(nameof(Indent));
+}
+
+/// <summary>
+/// Rows to click: the places a phrase was found at, the bookmarks of a document, what a check came upon. Clicking
+/// a row chooses it, which the owner of the list answers, usually by going to the page it is about.
+/// </summary>
+public sealed partial class ListField(string labelKey) : Field(labelKey)
+{
+    private bool _quiet;
+
+    [ObservableProperty] private ListItem? _selected;
+
+    public ObservableCollection<ListItem> Items { get; } = [];
+
+    /// <summary>Called when the user chose a row.</summary>
+    public Action<ListItem>? Chosen { get; set; }
+
+    /// <summary>How high the list grows before it scrolls.</summary>
+    public double MaxHeight { get; init; } = 236;
+
+    public bool HasItems => Items.Count > 0;
+
+    protected override bool IsInput => false;
+
+    partial void OnSelectedChanged(ListItem? value)
+    {
+        if (value != null && !_quiet) Chosen?.Invoke(value);
+    }
+
+    /// <summary>Marks a row as the one in hand without that counting as a choice.</summary>
+    public void Show(ListItem? item)
+    {
+        _quiet = true;
+        Selected = item;
+        _quiet = false;
+    }
+
+    /// <summary>Puts other rows in the place of the ones there are.</summary>
+    public void Fill(IEnumerable<ListItem> items)
+    {
+        Show(null);
+        Items.Clear();
+        foreach (var item in items) Items.Add(item);
+        OnPropertyChanged(nameof(HasItems));
+    }
 }
 
 /// <summary>Several fields next to each other on one line.</summary>

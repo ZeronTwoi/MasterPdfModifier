@@ -13,6 +13,12 @@ public static class AppInfo
     /// </summary>
     public const string WindowClass = "MasterPdfModifier";
 
+    /// <summary>
+    /// The name of the mark an open app sets (a named mutex). The setup for Windows knows it by the same name, as
+    /// AppMark in packaging/windows/setup.iss.
+    /// </summary>
+    public const string OpenMark = "MasterPdfModifier.Open";
+
     /// <summary>Where the app is published: its source, and each version with its downloads.</summary>
     public const string Repository = "https://github.com/ZeronTwoi/MasterPdfModifier";
 

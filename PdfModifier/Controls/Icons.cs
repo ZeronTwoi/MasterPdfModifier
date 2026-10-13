@@ -44,6 +44,10 @@ public static class Icons
     public static Geometry ToEnd { get; } = Parse("M5 20 h14 M12 4 v12 M7 11 l5 5 5 -5");
     public static Geometry Reverse { get; } = Parse("M8 4 v16 M4 8 l4 -4 4 4 M16 20 v-16 M12 16 l4 4 4 -4");
 
+    // An entry of a list moved in under the one before it, and out again
+    public static Geometry LevelIn { get; } = Parse("M4 6 h16 M11 12 h9 M4 18 h16 M4 9.5 l3 2.5 -3 2.5");
+    public static Geometry LevelOut { get; } = Parse("M4 6 h16 M11 12 h9 M4 18 h16 M7 9.5 l-3 2.5 3 2.5");
+
     // How a sheet is divided into pages, and the order they are taken in
     private const string Sheet = "M5 4 h14 a1 1 0 0 1 1 1 v14 a1 1 0 0 1 -1 1 h-14 a1 1 0 0 1 -1 -1 v-14 a1 1 0 0 1 1 -1 z ";
     public static Geometry LayoutAuto { get; } = Parse(Sheet + "M12 7.5 l1.3 3.2 3.2 1.3 -3.2 1.3 -1.3 3.2 -1.3 -3.2 -3.2 -1.3 3.2 -1.3 z");
@@ -64,6 +68,7 @@ public static class Icons
         ["RemoveWatermark"] = Parse("M4 15 l9 -9 a1.4 1.4 0 0 1 2 0 l4 4 a1.4 1.4 0 0 1 0 2 l-7 7 h-4 l-4 -4 z M9 10 l6 6 M12 19 h8"),
         ["PageNumbers"] = Parse("M9 4 l-2 16 M17 4 l-2 16 M5 9 h15 M4 15 h15"),
         ["Flatten"] = Parse("M12 4 l9 5 -9 5 -9 -5 z M3 14 l9 5 9 -5"),
+        ["Bookmarks"] = Parse("M7 3 h10 a1 1 0 0 1 1 1 v17 l-6 -4 -6 4 v-17 a1 1 0 0 1 1 -1 z"),
         ["Metadata"] = Parse("M21 12 a9 9 0 1 1 -18 0 a9 9 0 1 1 18 0 M12 11 v6 M12 7.4 v0.2"),
         ["Merge"] = Parse("M6 4 v3 a5 5 0 0 0 5 5 h1 M18 4 v3 a5 5 0 0 1 -5 5 h-1 v8 M9 17 l3 3 3 -3"),
         ["Split"] = Parse("M12 4 v7 M12 11 h-1 a5 5 0 0 0 -5 5 v4 M12 11 h1 a5 5 0 0 1 5 5 v4 M3.5 17.5 l2.5 2.5 2.5 -2.5 M15.5 17.5 l2.5 2.5 2.5 -2.5"),
@@ -75,11 +80,16 @@ public static class Icons
         ["Resize"] = Parse("M5 19 l14 -14 M13 5 h6 v6 M11 19 h-6 v-6"),
         ["Crop"] = Parse("M7 3 v14 h14 M3 7 h14 v14"),
         ["Sheets"] = Parse("M5 4 h14 a1 1 0 0 1 1 1 v14 a1 1 0 0 1 -1 1 h-14 a1 1 0 0 1 -1 -1 v-14 a1 1 0 0 1 1 -1 z M12 4 v3 M12 10 v4 M12 17 v3 M4 12 h3 M10 12 h4 M17 12 h3"),
+        ["PerSheet"] = Parse(Sheet + "M7.2 7.2 h3.4 v3.4 h-3.4 z M13.4 7.2 h3.4 v3.4 h-3.4 z M7.2 13.4 h3.4 v3.4 h-3.4 z M13.4 13.4 h3.4 v3.4 h-3.4 z"),
         ["Compress"] = Parse("M4 4 l6 6 M10 5 v5 h-5 M20 20 l-6 -6 M14 19 v-5 h5"),
         ["Enhance"] = Parse("M11 4 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 z M19 15 v4 M17 17 h4"),
         ["Ocr"] = Parse("M4 8 v-3 a1 1 0 0 1 1 -1 h3 M16 4 h3 a1 1 0 0 1 1 1 v3 M20 16 v3 a1 1 0 0 1 -1 1 h-3 M8 20 h-3 a1 1 0 0 1 -1 -1 v-3 M8 9 h8 M12 9 v7"),
         ["Automate"] = Parse("M13 3 l-8 11 h6 l-1 7 8 -11 h-6 z"),
+        ["Find"] = Parse("M18 11 a7 7 0 1 1 -14 0 a7 7 0 1 1 14 0 M16 16 l4.5 4.5"),
+        ["Copy"] = Parse("M9 8 h10 a1 1 0 0 1 1 1 v10 a1 1 0 0 1 -1 1 h-10 a1 1 0 0 1 -1 -1 v-10 a1 1 0 0 1 1 -1 z M16 4.5 h-11 a1 1 0 0 0 -1 1 v11"),
+        ["Pictures"] = Parse("M5 4 h14 a1 1 0 0 1 1 1 v14 a1 1 0 0 1 -1 1 h-14 a1 1 0 0 1 -1 -1 v-14 a1 1 0 0 1 1 -1 z M4 16 l5 -5 4 4 3 -3 4 4 M16.5 8.5 a1 1 0 1 1 -2 0 a1 1 0 1 1 2 0"),
         ["Compare"] = Parse("M5 5 h5 v14 h-5 z M14 5 h5 v14 h-5 z"),
+        ["Archive"] = Parse("M6 3 h8 l5 5 v11 a2 2 0 0 1 -2 2 h-11 a2 2 0 0 1 -2 -2 v-14 a2 2 0 0 1 2 -2 z M14 3 v5 h5 M8.5 14 l2.5 2.5 4.5 -5"),
         ["Protect"] = Parse("M7 11 h10 a1 1 0 0 1 1 1 v7 a1 1 0 0 1 -1 1 h-10 a1 1 0 0 1 -1 -1 v-7 a1 1 0 0 1 1 -1 z M8 11 v-3 a4 4 0 0 1 8 0 v3"),
         ["Settings"] = Parse("M4 7 h9 M17 7 h3 M4 17 h3 M11 17 h9 M15 5 v4 M9 15 v4")
     };

@@ -3,7 +3,9 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -52,15 +54,27 @@ public static class FieldFocus
             (_box, _field) = (box, field);
             field.FocusRequested += Take;
             box.DetachedFromVisualTree += Detached;
+            box.KeyDown += Pressed;
         }
 
         public void Stop()
         {
             _field.FocusRequested -= Take;
             _box.DetachedFromVisualTree -= Detached;
+            _box.KeyDown -= Pressed;
         }
 
         private void Detached(object? sender, VisualTreeAttachmentEventArgs e) => Stop();
+
+        /// <summary>Enter in a box of one line does what the field is there for, where it says what that is.</summary>
+        private void Pressed(object? sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter || _field.Multiline || _field.Submit is not { } submit) return;
+            e.Handled = true;
+            // The box hands its text on when it loses the keyboard; here it has to be there before that.
+            _field.Value = _box.Text ?? "";
+            submit();
+        }
 
         private void Take()
         {
@@ -134,11 +148,25 @@ public partial class MainWindow : Window
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
 
+    // The picture that is on the clipboard: other programs may ask for it long after it was put there.
+    private Bitmap? _copied;
+
+    private async Task CopyPicture(SkiaSharp.SKBitmap picture)
+    {
+        if (Clipboard is not { } clipboard) return;
+        var bitmap = BitmapConverter.ToAvalonia(picture);
+        await clipboard.SetBitmapAsync(bitmap);
+        _copied?.Dispose();
+        _copied = bitmap;
+    }
+
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
         if (ViewModel is not { } vm) return;
         vm.Dialogs = new Dialogs(this);
+        vm.CopyText = text => Clipboard?.SetTextAsync(text) ?? Task.CompletedTask;
+        vm.CopyPicture = CopyPicture;
         vm.PagesRebuilt += SyncSelectionFromViewModel;
         // Wait for the layout pass that makes the page view visible, then show the whole first page.
         vm.DocumentOpened += () => Dispatcher.UIThread.Post(

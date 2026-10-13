@@ -6,23 +6,30 @@ The short version is on the [main page](../README.md).
 - [The window](#the-window)
 - [Typed pages and scans](#typed-pages-and-scans)
 - [Edit text and images](#edit-text-and-images)
+- [Bookmarks](#bookmarks)
 - [Cut sheet into pages](#cut-sheet-into-pages)
+- [Pages per sheet](#pages-per-sheet)
 - [Turn and mirror pages](#turn-and-mirror-pages)
 - [Settings that are quick to set](#settings-that-are-quick-to-set)
 - [The page list](#the-page-list)
 - [Poor scans](#poor-scans)
 - [Compress](#compress)
 - [Automate](#automate)
+- [Search](#search)
+- [Copy text and pictures](#copy-text-and-pictures)
+- [Extract pictures](#extract-pictures)
+- [Check PDF/A](#check-pdfa)
 - [Languages](#languages)
 - [What the app fetches by itself](#what-the-app-fetches-by-itself)
 - [New versions](#new-versions)
+- [Removing the app](#removing-the-app)
 - [Getting around](#getting-around)
 - [Good to know](#good-to-know)
 
 ## The window
 
-- **Left:** the tools, in four groups (Edit, Pages, Optimise, Review and protect). The box above them finds a tool
-  by a word of its name or of what it does.
+- **Left:** the tools, in five groups (Edit, Pages, Optimise, Find and take out, Review and protect). The box above
+  them finds a tool by a word of its name or of what it does.
 - **Next to them:** the page list. Pages are selected, reordered, added and removed here.
 - **Middle:** the page on view, with the bar for turning pages and zooming under it.
 - **Right:** the settings of the tool that is selected, and its **Apply** button.
@@ -60,6 +67,28 @@ This tool is an editor, not a form:
 - The eraser is told what it may touch: the page itself, text added afterwards, images added afterwards. The page is
   painted over in the colour around the area or in one you choose.
 - What was added stays an object: it can be changed again later, also after the file was saved and reopened here.
+
+## Bookmarks
+
+<img src="images/bookmarks.png" width="820" alt="The bookmarks of a manual: three entries, one of them set in under another, with the buttons to name, move and nest them">
+
+Bookmarks are the list of contents a reader shows beside the pages. The tool lists the ones a document has; a click
+on one goes to its page.
+
+- **Add for this page** makes a bookmark for the page on view, named after the heading of that page, or after what
+  stands in the *Name* box. It is in hand at once, so typing a name and pressing Enter renames it.
+- **Up**, **Down**, **One level in** and **One level out** move the bookmark in hand together with everything that
+  stands under it; **Lead it to the page on view** points it somewhere else.
+- **Propose from the headings** finds the headings by their print, larger or bolder than the running text, and puts
+  them in the place of the bookmarks there are: the largest print as the outer level, up to three levels deep,
+  each leading to its heading rather than to the top of its page. The slider sets how readily a line counts as a
+  heading. Close calls (a line only a little larger, or bold at the size of the text) are marked red, to be
+  confirmed, renamed or deleted. What stands on every page in the same words is taken for a page header and left
+  out.
+
+Nothing is written while you work: the bookmarks go into the document when it is saved or another tool takes over,
+and one Undo brings back what the document had. Pages that are scans without a text layer have no print to
+measure; *Make searchable (OCR)* gives them one first.
 
 ## Cut sheet into pages
 
@@ -114,6 +143,25 @@ was photographed. **Extra areas around the pages** says what is done about them.
 
 A sheet that shows a single page with something around it is cut out of that the same way; it is marked with a 1 in
 the page list.
+
+## Pages per sheet
+
+The opposite of cutting a sheet apart: several pages are put on each sheet, scaled down, to save paper, to hand out
+slides or to see a document at a glance. The pages stay what they were, text that can be searched and pictures at
+their full resolution, only smaller.
+
+- **Pages on each sheet:** 2, 4, 6, 8, 9 or 16.
+- **Sheet size:** the size of the pages themselves, or A4, A3, A5, Letter, Legal. **The sheets stand** as fits
+  best, which is whichever way leaves the pages larger (two upright pages lie side by side on a sheet on its side),
+  or upright or on their side when you say so.
+- **Order on the sheet:** left to right then down, right to left then down, or top to bottom then to the right.
+- The white around the sheet and between the pages is set in millimetres, and a thin line can be drawn around every
+  page.
+
+The page on view shows the sheet it will be on, with *Sheet 2 of 5* under it, and the line above **Apply** says how
+many sheets the pages come to and at what share of their size each page comes out. With only some pages chosen,
+their sheets stand where the first of them stood and the other pages stay as they are. Form fields and comments are
+made part of the pages first, so that they show on the sheets as well.
 
 ## Turn and mirror pages
 
@@ -204,6 +252,80 @@ sizes before and after, file by file and in total.
 Automate runs a chain of steps (improve clarity, remove watermarks, crop to content, flatten, OCR, compress, remove
 metadata) on the selected or all pages of the open document, or on a batch of files.
 
+## Search
+
+<img src="images/search-scan.png" width="820" alt="A phrase found twenty times on a scanned page: every place marked on the page, counted in the page list and listed with the words around it">
+
+Type a word or a phrase and press Enter (or **Search**).
+
+- **In this document:** every place it was found at is marked on the page, counted on the pages of the page list
+  and listed with the words around it. **Previous** and **Next** (or F3 and Shift + F3 with the page in front) go
+  from place to place; a click on a row of the list or on a mark on the page goes straight there.
+- **In a folder of PDFs**, with or without the folders inside it: the files that have the phrase are listed with
+  how often and on which pages. A click on a file opens it and shows its places, and the list of files stays, to go
+  on to the next one. No document has to be open for this.
+- **Scanned pages are read for it.** What was read off a scan is marked orange and said to be so in the list; a
+  place that was read with little certainty is marked red, so nobody relies on a word that was half guessed. With
+  the box cleared, or where reading lacks something that was not fetched, the search still runs on the pages it
+  can do and says how many scans it passed over and why.
+- A phrase may run over the end of a line, also where a word was divided there; capitals count only when asked for;
+  letters written as one sign (ﬁ) are found by their letters, and the two letters i of Turkish as one.
+
+What the pages say is kept while the document stays as it is, so a second search takes moments and a scan is read
+once.
+
+## Copy text and pictures
+
+Takes the text of a page, or a picture of it, to the clipboard or into a file.
+
+- Without a frame the whole page is taken. **Drag a frame** on the page around what you want and only that is:
+  the frame stays, can be moved and pulled into shape, and goes again with Esc or *Take the whole page again*.
+- The text that would be taken stands in a box, where it can be put right before **Copy the text**; the words it
+  comes from are marked on the page. On a scanned page it is read off the picture, and lines that were hard to
+  read are marked red.
+- **Copy as a picture** and **Save as a picture…** take the frame (or the page) at the resolution set, 300 dpi as
+  the tool starts out.
+- **Save the text…** at the bottom writes the text of all pages, of the selected ones or of a range into one file,
+  page after page.
+
+## Extract pictures
+
+<img src="images/extract-pictures.png" width="820" alt="A page with two pictures, both marked on the page and shown small in the tool, with how many the chosen pages hold">
+
+Saves the pictures a document is made with, at the resolution they are stored in, which is usually far more than a
+page shows of them. Of a scanned page that is the scan itself.
+
+- The pictures of the page on view are marked on it and shown small; the note says how many the chosen pages hold.
+- **Leave out pictures smaller than** a number of pixels keeps bullets, rules and ornaments out.
+- **As they are** saves a JPEG as the JPEG it is, byte for byte, and everything else as PNG, which loses nothing
+  either; or have them all as PNG or as JPEG.
+- A picture that several pages use (a logo, a letterhead) is saved once, unless every use is wanted.
+- Click a picture, on the page or among the small ones, to **save** or **copy** just that one.
+
+**Apply** asks for a folder and writes the files there, each named after the document, its page and its place on
+the page.
+
+## Check PDF/A
+
+<img src="images/check-pdfa.png" width="820" alt="A document checked against PDF/A: three things stand in the way, each with the pages it is on, and those pages marked in the page list">
+
+PDF/A is the standard for files that have to stay readable for decades: everything a file needs to be shown is
+inside it, and nothing in it depends on a program, a password or one particular computer. The tool looks at the
+document when it is opened and again whenever the document changes, and says:
+
+- whether the file says it is PDF/A, and which part (PDF/A-1, 2 or 3); it is checked against that part, or against
+  the one you choose;
+- what stands in the way, each thing by name and with the pages it is on. A click goes to the first of them, and
+  the pages are marked in the page list.
+
+It looks for what most often stands in the way: the PDF/A mark itself, encryption, fonts that are not part of the
+file, colours without a profile that says what they mean, transparency (which PDF/A-1 does not allow), scripts and
+actions that run by themselves, attachments, forms whose looks are left to the reader, compression and annotations
+of kinds that are not allowed. What it cannot tell for certain says so and is marked red.
+
+This is a look, not a certificate. The standard has hundreds of rules, and where a binding verdict is needed, the
+validator of the archive that takes the file has the last word.
+
 ## Languages
 
 The interface is available in English, Español, Deutsch, Русский, Français, 日本語, Português and Türkçe. It starts
@@ -247,11 +369,53 @@ The first time the app is started it asks whether it should tell you when a new 
 - **No**, or closing the question: the app never connects for this, and it does not ask again.
 
 When there is a newer version, the settings button at the top gets a warning sign. Settings then say which version
-is out and which one you have, and **Open the download page** leads to it; installing the new version over the old
-one keeps your settings. The box *Tell me when a new version is out* in Settings changes your answer at any time;
-it counts from the next start of the app.
+is out and which one you have, with two buttons under it:
 
-<img src="images/update-notice.png" width="820" alt="The warning sign on the settings button, and the note in Settings that a newer version is out">
+- **Update now** puts the new version in the place of the one you have. The app fetches it from GitHub, checks it
+  against the checksums published with that version, hands over to it and closes; a moment later it is open again
+  as the new version, with the document you had open, and the line at the bottom says *Updated to version …*. Your
+  settings stay as they are. Nothing is fetched before the button is pressed.
+- **See what is new** opens the page of that version, which says what changed and has the downloads for whoever
+  would rather install it by hand.
+
+The app closes for an update, so it does not start one over work that is not saved: it says so under the note and
+waits for you to save and press again. The same goes for a second window of the app that is still open. A download
+that is not the file that was published is deleted and never started.
+
+What happens when the button is pressed goes by how the app came onto the computer. Installed by the Windows setup,
+the new setup is run; it asks nothing, shows its progress and keeps the choices you made the first time. The
+one-file app replaces its own file. The Linux package is installed through the package manager, which asks for your
+password. A copy that is none of the downloads, a build from the source for one, only has *See what is new*.
+
+The box *Tell me when a new version is out* in Settings changes your answer at any time; it counts from the next
+start of the app.
+
+<img src="images/update-notice.png" width="820" alt="The warning sign on the settings button, the note in Settings that a newer version is out, and the buttons Update now and See what is new">
+
+## Removing the app
+
+**Windows, installed by the setup.** Remove it like any other app: *Settings › Apps › Installed apps › Master PDF
+Modifier › Uninstall* (or *Add or remove programs*). An app that is still open is not removed; you are asked to
+close it first. What goes:
+
+- the program and its folder, the shortcuts in the Start menu and on the desktop, and pins on the taskbar;
+- its entry among the installed apps and under "Open with" for PDF files, and what Windows noted about it by itself;
+- what it left in the temp folder: undo histories of runs that ended badly, pages that were dragged out, downloads;
+- your settings and the downloaded language data, if you say yes when asked. Say no to keep them for a later
+  installation.
+
+After a yes, nothing of the app is left on the computer. Your documents are never touched.
+
+**Windows, the one-file app.** Nothing was installed, so there is nothing to uninstall: delete the file. It kept its
+settings in `%APPDATA%\PdfModifier` and language data in `%LOCALAPPDATA%\PdfModifier`; delete those two folders
+too if you want nothing left. What it unpacked of itself lies in the temp folder, under `.net\MasterPdfModifier`;
+Windows' own clean-up of temporary files takes it away, or delete that folder as well.
+
+**Linux.** Remove the package in the software centre. An app started from the unpacked archive is removed by
+deleting it; take out its menu entry first, with the button in Settings.
+
+While it is in use the app tidies up after itself as well: each start clears away what an earlier run or an older
+version left in the temp folder, as long as no other window of the app is open that could still need it.
 
 ## Getting around
 
@@ -298,3 +462,11 @@ it counts from the next start of the app.
   blur, so the slider is worth trying on the page on view. Print that has dissolved altogether stays unreadable.
 - Compression gains come from images. Text-only documents are already compact.
 - Merge, split and extract build new documents, so bookmarks are not carried over. In-place tools keep them.
+- A file that is PDF/A does not stay PDF/A when it is changed here. Several tools write the document anew, with a
+  metadata packet of their own in which the PDF/A mark is not kept, and pages the app writes may carry a
+  transparency group, which PDF/A-1 bars. *Check PDF/A* shows it right after such a change. The app can check a
+  file against PDF/A; it cannot make one.
+- A place found inside a word is marked as the share of the word its letters come to, with every letter taken to
+  be of one width: the mark may be a little off, the word is the right one.
+- Pictures are taken out as the document stores them. A picture that is laid over the page with a mask of its own
+  (to let the page show through) comes out without that mask.

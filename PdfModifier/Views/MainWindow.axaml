@@ -99,7 +99,9 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1" ColumnDefinitions="238,176,*,356">
+        <!-- Widths that come out as whole pixels at 125 %, 150 % and 175 % as well: with one that does not, the
+             columns add up to a pixel more than the window is wide and the last of them loses it. -->
+        <Grid Grid.Row="1" ColumnDefinitions="248,176,*,356">
 
             <!-- ============ Tools ============ -->
             <Border Classes="panel" Grid.Column="0" BorderThickness="0,0,1,0">
@@ -112,7 +114,8 @@
                                        Foreground="{DynamicResource TextFaint}" />
                     </Panel>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel Margin="8,0,8,12">
+                        <!-- More room on the right than on the left: the scroll bar lies there, beside the tools and not on them. -->
+                        <StackPanel Margin="8,0,16,12">
                             <ItemsControl ItemsSource="{Binding ToolGroups}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:ToolGroup">
@@ -126,8 +129,9 @@
                                                                 CommandParameter="{Binding}" ToolTip.Tip="{Binding Description}">
                                                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                                                 <controls:Icon Data="{Binding Icon}" Width="17" Height="17" VerticalAlignment="Center" />
-                                                                <TextBlock Grid.Column="1" Text="{Binding Title}" TextTrimming="CharacterEllipsis"
-                                                                           VerticalAlignment="Center" />
+                                                                <!-- A long name takes a second line before any of it is left out. -->
+                                                                <TextBlock Grid.Column="1" Text="{Binding Title}" TextWrapping="Wrap" MaxLines="2"
+                                                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                             </Grid>
                                                         </Button>
                                                     </DataTemplate>
@@ -158,7 +162,7 @@
                     <!-- What can be done with the pages that are selected. -->
                     <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource PanelBorder}" BorderThickness="0,1,0,0" Padding="6,4"
                             IsVisible="{Binding HasDocument}">
-                        <UniformGrid Rows="1" IsEnabled="{Binding IsIdle}">
+                        <controls:EvenGrid Rows="1" IsEnabled="{Binding IsIdle}">
                             <Button Classes="ghost small" HorizontalAlignment="Stretch" Command="{Binding RotateSelectedPagesCommand}" CommandParameter="-90"
                                     ToolTip.Tip="{DynamicResource T_RotateLeft}">
                                 <controls:Icon Data="{x:Static controls:Icons.RotateLeft}" Width="16" Height="16" />
@@ -175,7 +179,7 @@
                                     ToolTip.Tip="{DynamicResource T_PagesDelete}">
                                 <controls:Icon Data="{x:Static controls:Icons.Trash}" Width="16" Height="16" />
                             </Button>
-                        </UniformGrid>
+                        </controls:EvenGrid>
                     </Border>
 
                     <!-- Pages can be dragged within the list to reorder them and out of the window to get them as
@@ -198,7 +202,9 @@
                                     <StackPanel Spacing="5">
                                         <Panel>
                                             <Border Classes="thumb" Width="{Binding DisplayWidth}" Height="{Binding DisplayHeight}">
-                                                <Image Source="{Binding Thumbnail}" Stretch="Fill" />
+                                                <Border>
+                                                    <Image Source="{Binding Thumbnail}" Stretch="Fill" />
+                                                </Border>
                                             </Border>
                                             <!-- What the active tool has to say about this page; red when it needs a look. -->
                                             <Border Classes="badge" Classes.warn="{Binding Badge.Warns, FallbackValue=False}"
@@ -254,9 +260,12 @@
                     <TextBlock Foreground="White" FontSize="11" FontWeight="SemiBold" LetterSpacing="0.4" Text="{DynamicResource T_PreviewBadge}" />
                 </Border>
 
-                <!-- Turning pages and zooming, always within reach whatever part of the page is on view. -->
-                <Border Classes="floating" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,14"
-                        IsVisible="{Binding HasDocument}">
+                <!-- Turning pages and zooming, always within reach whatever part of the page is on view. In a window
+                     too narrow for the bar it is shown smaller and whole, not with its end under the panel beside it.
+                     (Not clipped, as such a box is by default: the shadow of the bar lies around it.) -->
+                <Viewbox StretchDirection="DownOnly" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="12,0,12,14"
+                         ClipToBounds="False" IsVisible="{Binding HasDocument}">
+                <Border Classes="floating">
                     <StackPanel Orientation="Horizontal" Spacing="1">
                         <Button Classes="ghost" Command="{Binding PreviousPageCommand}" ToolTip.Tip="{DynamicResource T_TipPreviousPage}">
                             <controls:Icon Data="{x:Static controls:Icons.Previous}" Width="16" Height="16" />
@@ -284,6 +293,7 @@
                                 ToolTip.Tip="{DynamicResource T_ZoomActual}" />
                     </StackPanel>
                 </Border>
+                </Viewbox>
 
                 <!-- Nothing open yet. -->
                 <Border IsVisible="{Binding !HasDocument}" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520"
@@ -359,8 +369,9 @@
                                     <DataTemplate DataType="vm:SliderField">
                                         <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="2">
                                             <TextBlock Classes="label" Text="{Binding Label}" />
-                                            <!-- As high as the number box: in a row, a slider then lines up with the buttons beside it. -->
-                                            <Grid ColumnDefinitions="*,84" ColumnSpacing="8" Height="32">
+                                            <!-- As high as the number box: in a row, a slider then lines up with the buttons beside it.
+                                                 At least that high, never exactly: what is held to a height is cut off at it. -->
+                                            <Grid ColumnDefinitions="*,84" ColumnSpacing="8" MinHeight="32">
                                                 <Slider Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Value="{Binding Position}"
                                                         SmallChange="{Binding Increment}" LargeChange="{Binding Increment}" VerticalAlignment="Center" />
                                                 <NumericUpDown Grid.Column="1" Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
@@ -409,7 +420,7 @@
                                                      SelectionMode="Single,AlwaysSelected">
                                                 <ListBox.ItemsPanel>
                                                     <ItemsPanelTemplate>
-                                                        <UniformGrid Rows="{Binding Rows}" Columns="{Binding Columns}" />
+                                                        <controls:EvenGrid Rows="{Binding Rows}" Columns="{Binding Columns}" />
                                                     </ItemsPanelTemplate>
                                                 </ListBox.ItemsPanel>
                                                 <ListBox.ItemTemplate>
@@ -447,7 +458,7 @@
                                                      SelectionMode="Single,AlwaysSelected">
                                                 <ListBox.ItemsPanel>
                                                     <ItemsPanelTemplate>
-                                                        <UniformGrid Rows="1" />
+                                                        <controls:EvenGrid Rows="1" />
                                                     </ItemsPanelTemplate>
                                                 </ListBox.ItemsPanel>
                                                 <ListBox.ItemTemplate>
@@ -599,19 +610,23 @@
                                         </Panel>
                                     </DataTemplate>
                                     <DataTemplate DataType="vm:ActionField">
+                                        <!-- Filling its place in both directions: buttons in a row are then as high as the highest of them. -->
                                         <Button IsVisible="{Binding IsVisible}" Command="{Binding Command}" Classes.large="{Binding Large}"
                                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,10"
+                                                VerticalAlignment="Stretch" VerticalContentAlignment="Center"
                                                 ToolTip.Tip="{Binding Label}">
                                             <Panel>
-                                                <StackPanel Orientation="Horizontal" Spacing="7" HorizontalAlignment="Center" IsVisible="{Binding Beside}">
-                                                    <controls:Icon Data="{Binding Icon}" IsVisible="{Binding HasIcon}" Width="16" Height="16"
-                                                                   VerticalAlignment="Center" />
+                                                <!-- Not a row that lets its words run on: a label wider than the button goes
+                                                     over two lines inside it, instead of out of it and under its neighbour. -->
+                                                <DockPanel HorizontalAlignment="Center" IsVisible="{Binding Beside}">
+                                                    <controls:Icon DockPanel.Dock="Left" Data="{Binding Icon}" IsVisible="{Binding HasIcon}"
+                                                                   Width="16" Height="16" Margin="0,0,7,0" VerticalAlignment="Center" />
                                                     <TextBlock Text="{Binding Label}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" />
-                                                </StackPanel>
+                                                </DockPanel>
                                                 <!-- The few large buttons a tool is about: the drawing above, its words under it. -->
                                                 <StackPanel Spacing="5" IsVisible="{Binding Large}">
                                                     <controls:Icon Data="{Binding Icon}" Width="24" Height="24" HorizontalAlignment="Center" />
-                                                    <TextBlock Text="{Binding Label}" TextWrapping="Wrap" TextAlignment="Center" FontSize="12" MaxLines="2"
+                                                    <TextBlock Text="{Binding Label}" TextWrapping="Wrap" TextAlignment="Center" FontSize="12" MaxLines="3"
                                                                TextTrimming="CharacterEllipsis" />
                                                 </StackPanel>
                                             </Panel>
@@ -625,7 +640,7 @@
                                                 <ItemsControl ItemsSource="{Binding Spots}">
                                                     <ItemsControl.ItemsPanel>
                                                         <ItemsPanelTemplate>
-                                                            <UniformGrid Rows="3" Columns="3" />
+                                                            <controls:EvenGrid Rows="3" Columns="3" />
                                                         </ItemsPanelTemplate>
                                                     </ItemsControl.ItemsPanel>
                                                     <ItemsControl.ItemTemplate>
@@ -682,6 +697,27 @@
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    <!-- Rows to click: what was found, what there is to go to. -->
+                                    <DataTemplate DataType="vm:ListField">
+                                        <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="5">
+                                            <TextBlock Classes="label" Text="{Binding Label}"
+                                                       IsVisible="{Binding Label, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                            <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" MaxHeight="{Binding MaxHeight}"
+                                                     IsVisible="{Binding HasItems}" CornerRadius="6"
+                                                     BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" Background="{DynamicResource ControlFill}">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:ListItem">
+                                                        <StackPanel Margin="{Binding Indent}" Spacing="1">
+                                                            <TextBlock Classes.invalid="{Binding Warns}" Text="{Binding Title}" TextWrapping="Wrap" MaxLines="3"
+                                                                       TextTrimming="CharacterEllipsis" FontSize="13" />
+                                                            <TextBlock Classes="muted" Text="{Binding Detail}" FontSize="11.5" IsVisible="{Binding HasDetail}"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
                                         </StackPanel>
                                     </DataTemplate>
                                     <DataTemplate DataType="vm:RowField">

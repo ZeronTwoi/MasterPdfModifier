@@ -17,6 +17,12 @@ public sealed partial class UpdateCheck
     private string? _found;
 
     /// <summary>
+    /// The page of the newer version that was found, with what is new in it and its downloads. It is where GitHub
+    /// pointed, so it stays right when the project moves.
+    /// </summary>
+    public string? Page { get; private set; }
+
+    /// <summary>
     /// Asks an address for its headers and returns where it redirects to, or null when it does not. The tests put
     /// their own answers here; this is also where they count that nothing was asked.
     /// </summary>
@@ -38,7 +44,7 @@ public sealed partial class UpdateCheck
                 if (await Redirect(address, cancel) is not { } target || !target.StartsWith("https://github.com/", StringComparison.Ordinal)) break;
                 if (VersionIn(target) is { } version)
                 {
-                    if (IsNewer(version, current)) _found = version;
+                    if (IsNewer(version, current)) (_found, Page) = (version, target);
                     break;
                 }
 

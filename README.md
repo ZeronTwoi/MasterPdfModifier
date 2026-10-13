@@ -22,14 +22,15 @@
 
 ## What it can do
 
-22 tools in four groups, all in one window:
+28 tools in five groups, all in one window:
 
 | Group | Tools |
 | --- | --- |
-| **Edit** | Change the text and images of a page, add text boxes and pictures, erase · add a watermark · remove watermarks · page numbers · flatten · metadata |
-| **Pages** | Merge · split · cut a sheet that shows several pages into pages of their own, without the scanner edge and shadows around them · turn and mirror, and set upright the pages that lie on their side · delete · reorder · insert (blank pages, other PDFs, images) · extract (to PDF or PNG/JPEG/WebP) · scale · crop |
+| **Edit** | Change the text and images of a page, add text boxes and pictures, erase · add a watermark · remove watermarks · page numbers · flatten · metadata · bookmarks, by hand or proposed from the headings |
+| **Pages** | Merge · split · cut a sheet that shows several pages into pages of their own, without the scanner edge and shadows around them · put several pages on each sheet · turn and mirror, and set upright the pages that lie on their side · delete · reorder · insert (blank pages, other PDFs, images) · extract (to PDF or PNG/JPEG/WebP) · scale · crop |
 | **Optimise** | Compress one document or a whole folder · improve the clarity of scans · make scans searchable (OCR) · automate a chain of steps |
-| **Review and protect** | Compare two PDFs · protect with a password |
+| **Find and take out** | Search a document or a whole folder of PDFs, scans included · copy text or a picture of a page or of a part you mark · extract the pictures a document is made with, at their full resolution |
+| **Review and protect** | Compare two PDFs · check against PDF/A · protect with a password |
 
 ## What sets it apart
 
@@ -47,11 +48,16 @@
   says which pages it is going to work on.
 - **Your files stay on your computer.** No account, no upload, no tracking. The only things ever fetched from the
   internet are what text recognition needs (language data from the official Tesseract project and, where it is
-  missing, the runtime or program it runs on), and only after the app has asked you.
+  missing, the runtime or program it runs on) and, if you want them, new versions of the app itself; each only
+  after the app has asked you.
 - **Nothing to set up by hand.** A setup that asks what a setup should ask, or one file to start as it is. What the
   app needs beyond itself it fetches on its own, after asking; nobody has to open a command line.
 - **New versions, if you want to hear of them.** The app asks once. With a yes it takes one look per start and
-  puts a warning sign on the settings button when there is a newer version; with a no it never connects for this.
+  puts a warning sign on the settings button when there is a newer version; **Update now** then fetches it, checks
+  it and puts it in place. With a no it never connects for this.
+- **It leaves when you tell it to, and takes its things along.** No background service, no start with Windows, no
+  icon in the tray, nothing running once the window is closed. Removing it takes away the program, its shortcuts,
+  what Windows knew it by and what it kept in the temp folder, and asks whether your settings should go too.
 - **Eight interface languages**: English, Español, Deutsch, Русский, Français, 日本語, Português and Türkçe. Light
   or dark follows the setting of your desktop.
 
@@ -117,15 +123,16 @@ Download it, start it, use it. There is no command line anywhere.
 
 | | Windows | Linux |
 | --- | --- | --- |
-| **Start it** | Run `MasterPdfModifier-Setup.exe`. The setup speaks the app's eight languages and asks where to install, whether you want a shortcut on the desktop and whether to offer the app under "Open with" for PDF files. It installs for you alone, so no administrator is needed, and the app can be removed again like any other. Rather not install anything? `MasterPdfModifier.exe` is the whole app in one file: double-click it, wherever it lies. | Debian, Ubuntu, Mint and their relatives: open `MasterPdfModifier.deb` and let the software centre install it; the app is in the application menu afterwards. Others: unpack the archive and start `MasterPdfModifier`; it offers to put itself into the application menu. |
+| **Start it** | Run `MasterPdfModifier-Setup.exe`. The setup speaks the app's eight languages and asks where to install, which shortcuts you want (Start menu, desktop) and whether to offer the app under "Open with" for PDF files; whatever opens your PDF files now goes on doing so. It installs for you alone, so no administrator is needed. Rather not install anything? `MasterPdfModifier.exe` is the whole app in one file: double-click it, wherever it lies. | Debian, Ubuntu, Mint and their relatives: open `MasterPdfModifier.deb` and let the software centre install it; the app is in the application menu afterwards. Others: unpack the archive and start `MasterPdfModifier`; it offers to put itself into the application menu. |
 | **What it fetches by itself** | Language data for text recognition. On a freshly set-up Windows also the Microsoft Visual C++ runtime, which the text recognition is built on, straight from Microsoft. | Language data for text recognition. The Tesseract program, where it is not installed yet, from the distribution (the package brings it along). |
 
 <p align="center">
-  <img src="docs/images/setup.png" width="520" alt="The setup for Windows, asking whether to create a desktop shortcut and whether to offer the app under Open with for PDF files">
+  <img src="docs/images/setup.png" width="520" alt="The setup for Windows, asking which shortcuts to create and whether to offer the app under Open with for PDF files">
 </p>
 
 Windows may say that it does not know the setup or the app, because they are new and not signed: choose *More
-info*, then *Run anyway*.
+info*, then *Run anyway*. Whoever wants to be sure the file is the one that was published can compare it with
+`SHA256SUMS.txt`, which every version comes with.
 
 The app asks before it fetches anything and says what it is and where it comes from; after a yes it does the rest.
 "Not now" is a fine answer: everything but text recognition works without. The one-file app takes a few seconds
@@ -134,8 +141,17 @@ longer at its very first start, because it unpacks what it is made of.
 **New versions.** The first time it is started the app asks whether it should tell you when a new version is out.
 With a yes it looks once each time it is started: a single request to GitHub that is answered with the number of the
 newest version, without anything about you or your documents in it. When there is a newer one, the settings button
-gets a warning sign and the settings say which version it is and lead to its download. With a no the app never
-connects for this, and it does not ask again; the settings have a box to change your mind.
+gets a warning sign and the settings say which version it is. **Update now** does the rest: it fetches the new
+version from GitHub, checks that it is the file that was published, puts it in the place of the old one and starts
+the app again with the document you had open. Nothing is fetched before you press that button, and *See what is
+new* shows what you would be getting. With a no the app never connects for this, and it does not ask again; the
+settings have a box to change your mind.
+
+**Removing it.** The installed app is removed like any other, under *Installed apps* in the Windows settings. That
+takes away the program, its shortcuts and pins, its entry under "Open with", and what it left in the temp folder;
+it asks whether your settings and the downloaded language data should go as well, and with a yes nothing of the app
+is left on the computer. It does not remove an app that is still open, it asks you to close it first. The one-file
+app has nothing installed: delete the file. On Linux, remove the package in the software centre.
 
 Every release is started by the build itself, on Windows and on Ubuntu, before it is handed out. Beyond that, Windows
 is where the app has been used most; Linux has been tried far less, and reports of what works and what does not are
@@ -171,9 +187,11 @@ dotnet test
 
 **The downloads** are made by `.github/workflows/downloads.yml`. To publish a new version, raise `<Version>` in
 `PdfModifier/PdfModifier.csproj` and push to `main`: the tests run, the four downloads are built, each is tried
-(the installer by installing, starting and removing the app), and all are attached to a release named after the
-version. Apps that are told about new versions find it there. The one-file build can be made by hand, and asked
-whether it has all it needs:
+(the installer by `packaging/windows/try-setup.ps1`: installing, updating the way the app updates itself, changing
+the choices, removing, and looking each time at what is on the computer), and all are attached to a release named
+after the version, together with `SHA256SUMS.txt`. Apps that are told about new versions find it there, and update
+themselves from it: each from the download it came as, after checking it against that list. The one-file build can
+be made by hand, and asked whether it has all it needs and what kind of download it takes itself for:
 
 ```
 dotnet publish PdfModifier -c Release -r win-x64 -p:PublishSingleFile=true -o publish

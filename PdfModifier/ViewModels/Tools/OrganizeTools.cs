@@ -943,3 +943,80 @@ public sealed class CropTool : Tool
         context.Commit(await context.Run(() => PdfPages.AutoCrop(pdf, pages, padding)));
     }
 }
+
+/// <summary>
+/// Puts several pages on each sheet, scaled down. The sheet the page on view will be on is shown before anything
+/// is changed, and the line above Apply says how many sheets the pages come to and how large they are.
+/// </summary>
+public sealed class PerSheetTool : Tool
+{
+    private readonly PagesField _pages;
+    private readonly ModeField _count, _turn, _order;
+    private readonly ChoiceField _paper;
+    private readonly SliderField _margin, _gap;
+    private readonly BoolField _frame;
+
+    public PerSheetTool() : base("PerSheet", "GroupOrganize")
+    {
+        _pages = Add(new PagesField());
+        _count = Add(new ModeField("PerSheetCount", new Choice("2", "2", true), new Choice("4", "4", true), new Choice("6", "6", true),
+            new Choice("8", "8", true), new Choice("9", "9", true), new Choice("16", "16", true)));
+        _paper = Add(new ChoiceField("PerSheetPaper", Units.PaperChoices(new Choice("same", "PerSheetSame"))));
+        _turn = Add(new ModeField("PerSheetTurn",
+            new Choice("auto", "PerSheetTurnAuto"), new Choice("upright", "PerSheetUpright"), new Choice("sideways", "PerSheetSideways")));
+        _order = Add(new ModeField("PerSheetOrder",
+            new Choice("rows", "SheetOrderRows") { Icon = Controls.Icons.OrderRows }, new Choice("rtl", "SheetOrderRtl") { Icon = Controls.Icons.OrderRowsBack },
+            new Choice("columns", "SheetOrderColumns") { Icon = Controls.Icons.OrderColumns }));
+        _margin = Add(new SliderField("PerSheetMargin", 6, 0, 30, 1).WithStops(" mm", 0, 5, 10, 15));
+        _gap = Add(new SliderField("PerSheetGap", 3, 0, 20, 1).WithStops(" mm", 0, 3, 5, 10));
+        _frame = Add(new BoolField("PerSheetFrame"));
+    }
+
+    public override bool HasPreview => true;
+
+    /// <summary>The sheet as the settings make it, for pages of the given size (that of the first page that goes on a sheet).</summary>
+    private SheetPlan Plan(double pageWidth, double pageHeight)
+    {
+        var (paperWidth, paperHeight) = Units.Paper(_paper.Key) ?? (pageWidth, pageHeight);
+        var turn = _turn.Key switch { "upright" => SheetTurn.Upright, "sideways" => SheetTurn.Sideways, _ => SheetTurn.Automatic };
+        return PdfPagesPerSheet.Plan(int.Parse(_count.Key), paperWidth, paperHeight, turn, pageWidth, pageHeight, _margin.Mm(), _gap.Mm()) with
+        {
+            Order = _order.Key switch { "rtl" => SheetOrder.RowsRightToLeft, "columns" => SheetOrder.Columns, _ => SheetOrder.Rows },
+            Frame = _frame.Value
+        };
+    }
+
+    public override PreviewResult Preview(PreviewRequest request)
+    {
+        var pages = request.Resolve(_pages);
+        var (width, height) = PdfPagesPerSheet.SizeOf(request.Document, pages is { Count: > 0 } ? pages[0] : 0);
+        return PdfPagesPerSheet.SheetWith(request.Document, pages, request.PageIndex, Plan(width, height), request.Cancel) is { } found
+            ? new PreviewResult(found.Sheet, Loc.Format("PerSheetPreview", found.Number, found.Of))
+            : new PreviewResult(null, Loc.Get("PreviewOutside"));
+    }
+
+    public override string? Summary(MainViewModel main)
+    {
+        if (main.Session.View is not { } view) return null;
+        var pages = _pages.Resolve(main.SelectedPageIndexes, main.CurrentPageIndex, main.Pages.Count) ?? Enumerable.Range(0, main.Pages.Count).ToList();
+        if (pages.Count == 0) return null;
+        var plan = Plan(view.Pages[pages[0]].Width, view.Pages[pages[0]].Height);
+        return Loc.Format("SummaryPerSheet", pages.Count, PdfPagesPerSheet.SheetCount(pages.Count, plan),
+            $"{plan.Width / Units.PointsPerMm:0} × {plan.Height / Units.PointsPerMm:0} mm", $"{plan.ScaleOf(view.Pages[pages[0]].Width, view.Pages[pages[0]].Height):P0}");
+    }
+
+    public override async Task RunAsync(ToolContext context)
+    {
+        var pdf = context.Pdf;
+        var pages = context.Resolve(_pages);
+        var first = pages is { Count: > 0 } ? pages[0] : 0;
+        var count = pages?.Count ?? context.PageCount;
+        var size = context.Session.View!.Pages[first];
+        var plan = Plan(size.Width, size.Height);
+        context.Commit(await context.Run(() => PdfPagesPerSheet.Arrange(pdf, pages, plan, context.Progress, context.Cancel)));
+        var sheets = PdfPagesPerSheet.SheetCount(count, plan);
+        // The sheets are what is new; they are selected so the next step can go on with them.
+        context.Main.RestoreSelection(Enumerable.Range(first, sheets).ToList());
+        context.Status(Loc.Format("StatusPerSheet", count, sheets));
+    }
+}
