@@ -133,6 +133,10 @@
 
             <CornerRadius x:Key="ControlCornerRadius">6</CornerRadius>
             <CornerRadius x:Key="OverlayCornerRadius">9</CornerRadius>
+            <!-- A slider as high as the boxes and buttons it stands beside. The stock one keeps 15 free above and
+                 below its handle, 50 in all: in a row of 32 the handle hung out at the bottom and was cut off. -->
+            <GridLength x:Key="SliderPreContentMargin">6</GridLength>
+            <GridLength x:Key="SliderPostContentMargin">6</GridLength>
         </ResourceDictionary>
     </Application.Resources>
 
@@ -214,11 +218,16 @@
             <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
+        <!-- The shadow and the ring of the selected page lie around the thumbnail: it must not clip to its own
+             bounds, or neither is ever seen. The picture is cut to the rounded corners one level further in. -->
         <Style Selector="Border.thumb">
             <Setter Property="Background" Value="White" />
             <Setter Property="CornerRadius" Value="2" />
-            <Setter Property="ClipToBounds" Value="True" />
             <Setter Property="BoxShadow" Value="{DynamicResource PaperShadow}" />
+        </Style>
+        <Style Selector="Border.thumb > Border">
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="ClipToBounds" Value="True" />
         </Style>
 
         <!-- ================= buttons ================= -->
@@ -322,6 +331,9 @@
             <Setter Property="Padding" Value="3" />
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
             <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
+            <!-- A list asks to be scrolled to its selected entry. For buttons that are all on view that only does
+                 harm: a tool with a choice far down opened with its options pushed up and its heading cut off. -->
+            <Setter Property="AutoScrollToSelectedItem" Value="False" />
         </Style>
         <Style Selector="ListBox.segments ListBoxItem">
             <Setter Property="Padding" Value="4,6" />
