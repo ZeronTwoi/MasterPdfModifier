@@ -1,8 +1,9 @@
-**New in 0.2.0**
+**New in 0.3.0**
 
-- *Cut sheet into pages* leaves out what lies around a page: the dark edge of the scanner, the rim of pages under an open book, the shadow in its fold, the black along a photocopy. A slider sets how close to the print the cut goes; strips of a set width can be taken off by hand instead. An edge that is not certain is marked red, on the sheet and in the page list.
-- *Rotate pages* is buttons that act at once (90° left, 90° right, 180°, mirrored left to right or top to bottom). It also finds the pages that lie on their side or stand on their head, shows each the way it will stand, and sets them all upright.
-- The settings of every tool are quicker to set: choices are buttons that are all on view, sliders offer the values wanted most, where a page number or a watermark goes is clicked on a small picture of a page, crop shows a frame that is pulled into place, and every tool says which pages it is going to work on.
+- The app updates itself: **Update now** in the settings fetches the new version, checks it against the checksum published here and puts it in place, then opens again. Coming from 0.2.0 this happens by hand one last time: download and install as below, your settings stay.
+- The Windows setup lets you choose the shortcuts it makes and whether the app is offered under "Open with". Removing the app takes its shortcuts, folders and files with it and asks whether your settings and the downloaded recognition data should go as well.
+- Six more tools: *Search* (in the document or in every PDF of a folder, scans included), *Copy text and pictures*, *Extract pictures*, *Bookmarks*, *Pages per sheet* and *Check PDF/A*.
+- Nothing is cut off any more: slider handles are whole, the selected page wears its ring, a long label goes over two lines instead of running out of its button or ending in dots, every tool opens at the top of its options, and the page bar stays inside a small window. In all eight languages, and at every scaling a screen is set to.
 
 Download the file for your computer, start it, use it. No command line is involved anywhere.
 
