@@ -543,15 +543,17 @@ public class EditorUiTests
         Assert.Equal(offset.Y + 90, viewer.Offset.Y, 2.0);
 
         // So does the middle button, and the left one while the space bar is held, whatever the tool is doing.
-        Tool<CropTool>(vm).Fields.OfType<ChoiceField>().First().Select("area");
+        Tool<CropTool>(vm).Fields.OfType<ChoiceField>().First().Select("hand");
         Assert.Equal(CanvasMode.Area, vm.CanvasMode);
+        await Settle(() => vm.Region != null);
+        var frame = vm.Region;
         offset = viewer.Offset;
         grab = At(window, vm, 300, 300);
         window.MouseDown(grab, MouseButton.Middle);
         window.MouseMove(new Point(grab.X + 50, grab.Y + 40));
         window.MouseUp(new Point(grab.X + 50, grab.Y + 40), MouseButton.Middle);
         Assert.Equal(offset.X - 50, viewer.Offset.X, 2.0);
-        Assert.Null(vm.Region);
+        Assert.Equal(frame, vm.Region);
 
         window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.None);
         grab = At(window, vm, 300, 300);
@@ -560,7 +562,7 @@ public class EditorUiTests
         window.MouseUp(new Point(grab.X + 30, grab.Y + 30), MouseButton.Left);
         window.KeyReleaseQwerty(PhysicalKey.Space, RawInputModifiers.None);
         Assert.Equal(offset.X - 80, viewer.Offset.X, 2.0);
-        Assert.Null(vm.Region);
+        Assert.Equal(frame, vm.Region);
 
         vm.ZoomToWidth(viewer.Bounds.Width);
         await Settle();
@@ -597,11 +599,36 @@ public class EditorUiTests
         vm.ShowPreview = true;
         await Settle(() => vm.IsPreview && Centre() == 0xFF000000);
 
-        // Placed by a click on the page, the mark goes where the click was.
-        Field<ChoiceField>(watermark, "WatermarkLayout").Select("place");
+        // A spot chosen on the small page puts the mark there: at the top right, a fifth of the way in.
+        var place = watermark.Fields.OfType<PlaceField>().Single();
+        Assert.Equal("Center", place.Key);
+        place.ChooseCommand.Execute(place.Spots.Single(spot => spot.Key == "TopRight"));
+        await Settle(() => vm.IsPreview && Centre() == 0xFFFFFFFF);
+        Assert.Equal(0xFF000000, BitmapConverter.PixelAt(vm.PageBitmap, 0.8, 0.14));
+        Assert.True(place.Spots.Single(spot => spot.Key == "TopRight").IsChosen);
+
+        // Placed by a click on the page, the mark goes where the click was, and none of the spots is the chosen one.
         Assert.Equal(CanvasMode.Click, vm.CanvasMode);
         Click(window, vm, 300, 150);
-        await Settle(() => vm.IsPreview && Centre() == 0xFFFFFFFF);
+        await Settle(() => vm.IsPreview && BitmapConverter.PixelAt(vm.PageBitmap, 0.8, 0.14) == 0xFFFFFFFF);
+        Assert.Equal(0xFF000000, BitmapConverter.PixelAt(vm.PageBitmap, 300 / 595.0, 150 / 842.0));
+        Assert.Null(place.Key);
+        Assert.DoesNotContain(place.Spots, spot => spot.IsChosen);
+
+        // Where a click means something, dragging still moves the page under the mouse.
+        var viewer = window.FindControl<ScrollViewer>("Viewer")!;
+        vm.Zoom = 2;
+        await Settle(() => viewer.Extent.Height > viewer.Viewport.Height + 200);
+        var before = viewer.Offset;
+        var grab = viewer.TranslatePoint(new Point(viewer.Viewport.Width / 2, viewer.Viewport.Height / 2), window)!.Value;
+        window.MouseDown(grab, MouseButton.Left);
+        window.MouseMove(new Point(grab.X - 30, grab.Y - 40));
+        window.MouseMove(new Point(grab.X - 60, grab.Y - 80));
+        window.MouseUp(new Point(grab.X - 60, grab.Y - 80), MouseButton.Left);
+        Assert.Equal(before.Y + 80, viewer.Offset.Y, 3.0);
+        Assert.Null(place.Key);
+        vm.Zoom = 0.75;
+        await Settle(() => vm.IsPreview);
         Assert.Equal(0xFF000000, BitmapConverter.PixelAt(vm.PageBitmap, 300 / 595.0, 150 / 842.0));
 
         // On a page that is not among those chosen there is nothing to preview, and the panel says why.
@@ -623,11 +650,12 @@ public class EditorUiTests
         Field<SliderField>(watermark, "Opacity").Value = 60;
         await Settle(() => vm.IsPreview);
 
-        // A preview may also change the shape of the page.
-        vm.SelectedTool = vm.Tools.OfType<RotateTool>().Single();
-        await Settle(() => vm.IsPreview && vm.PageWidth > vm.PageHeight);
-        Assert.Equal((842.0, 595.0), (Math.Round(vm.PageWidth), Math.Round(vm.PageHeight)));
-        Assert.Equal(0, PdfPages.GetPageInfos(vm.Session.Bytes!)[0].RotationDegrees);
+        // A preview may also change the size of the page.
+        var resize = Tool<ResizeTool>(vm);
+        Field<ChoiceField>(resize, "ResizeTarget").Select("a3");
+        await Settle(() => vm.IsPreview && vm.PageWidth > 800);
+        Assert.Equal((842.0, 1191.0), (Math.Round(vm.PageWidth), Math.Round(vm.PageHeight)));
+        Assert.Equal(595, PdfPages.GetPageInfos(vm.Session.Bytes!)[0].Width, 1.0);
         window.Close();
     }
 
@@ -672,7 +700,7 @@ public class EditorUiTests
     }
 
     [AvaloniaFact]
-    public async Task TheAreaACropWillKeepIsShownAndCanBeDrawnAndAdjusted()
+    public async Task TheAreaACropWillKeepIsShownAndCanBePulledIntoPlace()
     {
         var (window, vm) = Start();
         vm.Session.Open(TestPdf.WithText("Tight crop"), null);
@@ -680,35 +708,46 @@ public class EditorUiTests
         var crop = Tool<CropTool>(vm);
         var run = PdfTextEdit.GetTextRuns(vm.Session.Bytes!, 0)[0];
 
-        // Automatic: the content that was found, plus the margin asked for, with the rest of the page darkened.
+        // To the content: what was found, plus the space asked for, with the rest of the page darkened.
         await Settle(() => vm.Region != null);
         Assert.True(vm.DimOutsideRegion);
+        Assert.Equal(CanvasMode.Select, vm.CanvasMode);
         Assert.Equal(run.Bounds.Left - 3 * 72 / 25.4, vm.Region!.Value.Left, 2.0);
+        Field<SliderField>(crop, "CropPadding").Set(10);
+        await Settle(() => vm.Region is { } r && Math.Abs(r.Left - (run.Bounds.Left - 10 * 72 / 25.4)) < 2);
+        Assert.Equal(run.Bounds.Left - 10 * 72 / 25.4, vm.Region!.Value.Left, 2.0);
 
-        var mode = Field<ChoiceField>(crop, "CropMode");
-        mode.Select("margins");
-        Field<NumberField>(crop, "MarginLeft").Value = 25.4m;
+        // By hand: the frame starts a centimetre in from every edge, and typing a margin moves it.
+        var mode = Field<ModeField>(crop, "CropMode");
+        mode.Select("hand");
+        Assert.Equal(CanvasMode.Area, vm.CanvasMode);
+        var left = Field<NumberField>(crop, "MarginLeft");
+        Assert.True(left.IsVisible);
+        left.Value = 25.4m;
         await Settle(() => vm.Region is { } r && Math.Abs(r.Left - 72) < 0.5);
         Assert.Equal(595 - 10 * 72 / 25.4, vm.Region!.Value.Right, 0.5);
 
-        // By hand: drawn on the page, then pulled wider by its right edge.
-        mode.Select("area");
-        await Settle(() => vm.Region == null);
-        Drag(window, vm, 100, 100, 300, 250);
-        Assert.Equal(new RectD(100, 100, 300, 250), Rounded(vm.Region!.Value));
-        Drag(window, vm, 300, 175, 380, 175);
-        Assert.Equal(new RectD(100, 100, 380, 250), Rounded(vm.Region!.Value));
-        Drag(window, vm, 200, 170, 230, 190); // and moved as a whole from its inside
-        Assert.Equal(new RectD(130, 120, 410, 270), Rounded(vm.Region!.Value));
+        // Pulled on the page by its right edge, and moved as a whole from its inside; the margins follow.
+        var region = vm.Region!.Value;
+        Drag(window, vm, region.Right, region.CenterY, 380, region.CenterY);
+        await Settle(() => vm.Region is { } r && Math.Abs(r.Right - 380) < 1);
+        Assert.Equal(380, vm.Region!.Value.Right, 1.0);
+        Assert.Equal((595 - 380) / (72 / 25.4), Field<NumberField>(crop, "MarginRight").Number, 0.5);
+        Assert.Equal(25.4, left.Number, 0.01);
+        Drag(window, vm, 200, 400, 180, 430);
+        await Settle(() => vm.Region is { } r && Math.Abs(r.Left - 52) < 1);
+        region = vm.Region!.Value;
+        Assert.Equal((52.0, 360.0), (Math.Round(region.Left), Math.Round(region.Right)));
+        Assert.Equal(52 / (72 / 25.4), left.Number, 0.5);
+        Assert.Contains($"{region.Width / (72 / 25.4):0} × {region.Height / (72 / 25.4):0} mm", crop.Fields.OfType<InfoField>().Single().Text);
         Capture(window, "16-crop-area");
 
         await vm.ApplyCommand.ExecuteAsync(null);
         await Settle(() => !vm.IsBusy);
         var info = PdfPages.GetPageInfos(vm.Session.Bytes!)[0];
-        Assert.Equal((280.0, 150.0), (Math.Round(info.Width), Math.Round(info.Height)));
+        Assert.Equal(region.Width, info.Width, 1.0);
+        Assert.Equal(region.Height, info.Height, 1.0);
         window.Close();
-
-        static RectD Rounded(RectD r) => new(Math.Round(r.Left), Math.Round(r.Top), Math.Round(r.Right), Math.Round(r.Bottom));
     }
 
     [AvaloniaFact]

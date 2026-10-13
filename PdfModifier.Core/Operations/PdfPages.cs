@@ -163,6 +163,26 @@ public static unsafe class PdfPages
         return ForEachPage(pdf, pages, page => page.Rotation += degrees / 90);
     }
 
+    /// <summary>
+    /// Mirrors pages as they are shown: left to right, as a mirror standing beside the page would, or with
+    /// <paramref name="topToBottom"/> as one lying under it. For scans that were made from the wrong side of a
+    /// transparency or a tracing, and photographs taken in a mirror.
+    /// </summary>
+    public static byte[] Mirror(byte[] pdf, IReadOnlyCollection<int>? pages, bool topToBottom = false) =>
+        ForEachPage(pdf, pages, page =>
+        {
+            var (l, b, r, t) = page.GetUserBox();
+            // On a page that is shown turned on its side, left and right are bottom and top in its own coordinates.
+            var acrossIsX = page.Rotation % 2 == 0;
+            var matrix = acrossIsX != topToBottom
+                ? new FS_MATRIX { a = -1, d = 1, e = (float)(l + r) }
+                : new FS_MATRIX { a = 1, d = -1, f = (float)(b + t) };
+            var clip = new FS_RECTF { left = (float)l, bottom = (float)b, right = (float)r, top = (float)t };
+            if (Native.FPDFPage_TransFormWithClip(page.Handle, &matrix, &clip) == 0)
+                throw new PdfException($"Could not mirror page {page.Index + 1}.");
+            Native.FPDFPage_TransformAnnots(page.Handle, matrix.a, 0, 0, matrix.d, matrix.e, matrix.f);
+        });
+
     /// <summary>Reorders pages; <paramref name="newOrder"/>[i] is the current index of the page that ends up at position i.</summary>
     public static byte[] Reorder(byte[] pdf, IReadOnlyList<int> newOrder)
     {

@@ -561,6 +561,13 @@ public class PageCanvas : Control
 
         if (!_moved && Math.Abs(_current.X - _pressed.X) <= 3 && Math.Abs(_current.Y - _pressed.Y) <= 3) return;
         _moved = true;
+        // A press that was going to be a click and turns into a drag moves the page instead: where a click means
+        // something (a place for a watermark, a line of text), the page can still be pulled about.
+        if (_drag == Drag.Click)
+        {
+            _drag = Drag.Pan;
+            UpdateCursor(_current);
+        }
         var s = PointScale;
         double dx = (_current.X - _pressed.X) / s, dy = (_current.Y - _pressed.Y) / s;
 

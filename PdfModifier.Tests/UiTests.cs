@@ -148,10 +148,10 @@ public class UiTests
         vm.Session.Open(TestPdf.Numbered(4), null);
         await Settle(() => vm.PageBitmap != null);
 
-        Tool<RotateTool>(vm);
+        var rotate = Tool<RotateTool>(vm);
         vm.SetSelection([1, 2], 1);
-        await vm.ApplyCommand.ExecuteAsync(null);
-        await Settle(() => !vm.IsBusy);
+        Press(rotate, "RotateRightShort");
+        await Settle(() => !vm.IsBusy && vm.CanUndo);
         Assert.Equal([0, 90, 90, 0], PdfPages.GetPageInfos(vm.Session.Bytes!).Select(p => p.RotationDegrees));
 
         Tool<DeleteTool>(vm);

@@ -82,6 +82,12 @@ public sealed class ProtectTool : Tool
     {
         _password = Add(new TextField("ProtectPassword") { IsPassword = true });
         _confirm = Add(new TextField("ProtectConfirm") { IsPassword = true });
+        // For whoever wants to see what was typed before a file is locked with it.
+        var show = Add(new BoolField("ProtectShow"));
+        show.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(BoolField.Value)) _password.Reveal = _confirm.Reveal = show.Value;
+        };
         Add(new InfoField()).SetKey("ProtectNote");
     }
 
@@ -268,9 +274,9 @@ public static class ToolCatalog
         new MergeTool(main),
         new SplitTool(),
         new SheetTool(main),
-        new RotateTool(),
+        new RotateTool(main),
         new DeleteTool(),
-        new ReorderTool(),
+        new ReorderTool(main),
         new InsertTool(main),
         new ExtractTool(),
         new ResizeTool(),

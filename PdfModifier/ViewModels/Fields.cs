@@ -26,13 +26,19 @@ public abstract partial class Field(string labelKey) : LocalizedObject
     /// <summary>False for fields that only show something (hints, results, buttons): they have nothing to edit.</summary>
     protected virtual bool IsInput => true;
 
+    /// <summary>
+    /// False for the properties of a field that say something about what it holds rather than being it (a line
+    /// that describes the choice, a mark that it is wrong): their changing is no edit.
+    /// </summary>
+    protected virtual bool IsSetting(string property) => true;
+
     protected void OnEdited() => Edited?.Invoke();
 
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
         // An empty property name is the language-change broadcast.
-        if (IsInput && !string.IsNullOrEmpty(e.PropertyName) && e.PropertyName != nameof(IsVisible)) OnEdited();
+        if (IsInput && !string.IsNullOrEmpty(e.PropertyName) && e.PropertyName != nameof(IsVisible) && IsSetting(e.PropertyName)) OnEdited();
     }
 }
 
@@ -44,7 +50,14 @@ public partial class TextField(string labelKey, string value = "", bool multilin
     /// <summary>Masks the input, for passwords.</summary>
     public bool IsPassword { get; init; }
 
-    public char PasswordChar => IsPassword ? '•' : default;
+    /// <summary>Shows a password as it is typed, for whoever wants to check it.</summary>
+    [ObservableProperty] private bool _reveal;
+
+    public char PasswordChar => IsPassword && !Reveal ? '•' : default;
+
+    partial void OnRevealChanged(bool value) => OnPropertyChanged(nameof(PasswordChar));
+
+    protected override bool IsSetting(string property) => property is not (nameof(Reveal) or nameof(PasswordChar));
 
     /// <summary>Asks the view to put the keyboard focus into this field.</summary>
     public event Action? FocusRequested;
@@ -67,8 +80,11 @@ public partial class NumberField(string labelKey, decimal value, decimal minimum
     public void Set(double number) => Value = Math.Clamp((decimal)Math.Round(number, 2), minimum, maximum);
 }
 
+/// <summary>One of the values offered under a slider for a single click: the ones that are wanted most of the time.</summary>
+public sealed record SliderStop(decimal Value, string Label);
+
 /// <summary>A number chosen by dragging, with the exact value beside it: for strengths, opacities and angles.</summary>
-public class SliderField(string labelKey, decimal value, decimal minimum, decimal maximum, decimal increment = 1, string format = "0")
+public partial class SliderField(string labelKey, decimal value, decimal minimum, decimal maximum, decimal increment = 1, string format = "0")
     : NumberField(labelKey, value, minimum, maximum, increment, format)
 {
     /// <summary>The same value as a double, which is what a slider binds to.</summary>
@@ -77,6 +93,23 @@ public class SliderField(string labelKey, decimal value, decimal minimum, decima
         get => Number;
         set => Value = Math.Clamp(Math.Round((decimal)value / Increment) * Increment, Minimum, Maximum);
     }
+
+    /// <summary>Values that can be had with one click, shown as small buttons under the slider.</summary>
+    public IReadOnlyList<SliderStop> Stops { get; private set; } = [];
+
+    public bool HasStops => Stops.Count > 0;
+
+    /// <summary>Offers these values under the slider, each written with <paramref name="unit"/> after it.</summary>
+    public SliderField WithStops(string unit, params decimal[] values)
+    {
+        Stops = values.Select(stop => new SliderStop(stop, stop.ToString(Format, CultureInfo.CurrentCulture) + unit)).ToList();
+        return this;
+    }
+
+    [RelayCommand]
+    private void Use(SliderStop stop) => Value = Math.Clamp(stop.Value, Minimum, Maximum);
+
+    protected override bool IsSetting(string property) => property != nameof(Position);
 
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
     {
@@ -100,6 +133,12 @@ public sealed class Choice(string key, string labelKey, bool literal = false) : 
 {
     public string Key => key;
     public string Label => literal ? labelKey : Loc.Get(labelKey);
+
+    /// <summary>A small drawing that stands for the choice where choices are shown as buttons; its label is then the tip.</summary>
+    public Geometry? Icon { get; init; }
+
+    public bool HasIcon => Icon != null;
+
     public override string ToString() => Label;
 }
 
@@ -128,14 +167,50 @@ public partial class ChoiceField : Field
     }
 }
 
-/// <summary>A choice between a few things shown side by side as buttons, one of which is pressed.</summary>
-public sealed class ModeField(string labelKey, params Choice[] options) : ChoiceField(labelKey, options);
+/// <summary>
+/// A choice between a few things shown as buttons, one of which is pressed: all of them are on view and one click
+/// chooses. Side by side in one row, or in rows of <see cref="Columns"/> where the labels are long.
+/// </summary>
+public sealed class ModeField(string labelKey, params Choice[] options) : ChoiceField(labelKey, options)
+{
+    /// <summary>How many buttons stand in a row; 0 puts them all into one.</summary>
+    public int Columns { get; init; }
 
-/// <summary>Which pages an operation applies to.</summary>
+    public int Rows => Columns == 0 ? 1 : 0;
+
+    /// <summary>
+    /// What the pressed button stands for, written out under the buttons when they show drawings instead of words.
+    /// </summary>
+    public string Caption => Options.Any(option => option.HasIcon) ? Selected.Label : "";
+
+    public bool HasCaption => Caption.Length > 0;
+
+    protected override bool IsSetting(string property) => property is not (nameof(Caption) or nameof(HasCaption));
+
+    protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (e.PropertyName is nameof(Selected) or nameof(Options)) OnPropertyChanged(nameof(Caption));
+    }
+}
+
+/// <summary>
+/// Which pages an operation applies to: all, those selected in the page list, or a range that is typed. Under the
+/// choice it says which pages that comes to, so nobody has to look at the page list to know.
+/// </summary>
 public partial class PagesField : Field
 {
     [ObservableProperty] private Choice _scope;
     [ObservableProperty] private string _range = "";
+
+    /// <summary>The pages the choice comes to right now, in words: "3 pages: 2, 5-6".</summary>
+    [ObservableProperty] private string _summary = "";
+
+    /// <summary>True while the choice names no page at all or cannot be read.</summary>
+    [ObservableProperty] private bool _isInvalid;
+
+    private IReadOnlyList<int> _selected = [];
+    private int _current, _count;
 
     public PagesField(string labelKey = "Pages") : base(labelKey)
     {
@@ -146,7 +221,15 @@ public partial class PagesField : Field
     public IReadOnlyList<Choice> Scopes { get; }
     public bool IsRange => Scope.Key == "range";
 
-    partial void OnScopeChanged(Choice value) => OnPropertyChanged(nameof(IsRange));
+    partial void OnScopeChanged(Choice value)
+    {
+        OnPropertyChanged(nameof(IsRange));
+        Describe();
+    }
+
+    partial void OnRangeChanged(string value) => Describe();
+
+    protected override bool IsSetting(string property) => property is not (nameof(Summary) or nameof(IsInvalid) or nameof(IsRange));
 
     /// <summary>The chosen page indexes, or null for "all pages".</summary>
     public List<int>? Resolve(IReadOnlyList<int> selectedPages, int currentPage, int pageCount) => Scope.Key switch
@@ -155,6 +238,51 @@ public partial class PagesField : Field
         "range" => PageRange.Parse(Range, pageCount).Distinct().Order().ToList(),
         _ => null
     };
+
+    /// <summary>Tells the field what is selected in the page list, so it can say which pages its choice comes to.</summary>
+    public void Show(IReadOnlyList<int> selectedPages, int currentPage, int pageCount)
+    {
+        (_selected, _current, _count) = (selectedPages, currentPage, pageCount);
+        Describe();
+    }
+
+    private void Describe()
+    {
+        if (_count <= 0)
+        {
+            (Summary, IsInvalid) = ("", false);
+            return;
+        }
+
+        try
+        {
+            var pages = Resolve(_selected, _current, _count);
+            IsInvalid = pages is { Count: 0 };
+            Summary = pages switch
+            {
+                // A document of a single page has no "all" worth counting.
+                null => _count == 1 ? Loc.Format("PagesChosenOne", 1) : Loc.Format("PagesAllCount", _count),
+                { Count: 0 } => Loc.Get("PagesNone"),
+                { Count: 1 } => Loc.Format("PagesChosenOne", pages[0] + 1),
+                _ => Loc.Format("PagesChosen", pages.Count, Shortened(PageRange.Format(pages)))
+            };
+        }
+        catch (Exception e) when (e is FormatException or ArgumentOutOfRangeException)
+        {
+            (Summary, IsInvalid) = (Loc.Get("ErrPageRange"), true);
+        }
+
+        // A long list of single pages is cut short: the count before it says how many there are.
+        static string Shortened(string list) =>
+            list.Length <= 64 || list.LastIndexOf(',', 60) is not (> 0 and var end) ? list : list[..end] + ", …";
+    }
+
+    protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        // An empty property name is the language-change broadcast.
+        if (string.IsNullOrEmpty(e.PropertyName)) Describe();
+    }
 }
 
 /// <summary>A file used before, offered again under the Browse button. Images show a small picture of themselves.</summary>
@@ -326,7 +454,83 @@ public sealed class ActionField(string labelKey, Func<Task> action) : Field(labe
 {
     public ICommand Command { get; } = new AsyncRelayCommand(action);
 
+    /// <summary>A small drawing shown on the button with its label.</summary>
+    public Geometry? Icon { get; init; }
+
+    public bool HasIcon => Icon != null;
+
+    /// <summary>
+    /// Puts the drawing above the label instead of beside it: for a few large buttons in a row that are what the
+    /// tool is about (turn left, turn right).
+    /// </summary>
+    public bool Large { get; init; }
+
+    public bool Beside => !Large;
+
     protected override bool IsInput => false;
+}
+
+/// <summary>One of the spots of a <see cref="PlaceField"/>.</summary>
+public sealed partial class PlaceSpot(string key, string labelKey, bool offered) : LocalizedObject
+{
+    [ObservableProperty] private bool _isChosen;
+
+    public string Key => key;
+    public string Label => Loc.Get(labelKey);
+
+    /// <summary>False for a spot that is only there to keep the others in their places: it cannot be chosen.</summary>
+    public bool IsOffered => offered;
+}
+
+/// <summary>
+/// Where on the page something goes, chosen by clicking the spot on a small picture of a page: its corners, the
+/// middles of its sides and its centre, or those of them that the tool offers.
+/// </summary>
+public sealed partial class PlaceField : Field
+{
+    /// <summary>The nine spots, row by row from the top left. Their names are those of <c>StampPosition</c> where it has them.</summary>
+    public static readonly IReadOnlyList<(string Key, string LabelKey)> All =
+    [
+        ("TopLeft", "PosTopLeft"), ("TopCenter", "PosTopCenter"), ("TopRight", "PosTopRight"),
+        ("MiddleLeft", "PosMiddleLeft"), ("Center", "PosCenter"), ("MiddleRight", "PosMiddleRight"),
+        ("BottomLeft", "PosBottomLeft"), ("BottomCenter", "PosBottomCenter"), ("BottomRight", "PosBottomRight")
+    ];
+
+    /// <summary>The chosen spot; null once the place was set some other way (a click on the page itself).</summary>
+    [ObservableProperty] private string? _key;
+
+    /// <param name="offered">The spots that can be chosen; none given offers all nine.</param>
+    public PlaceField(string labelKey, string chosen, params string[] offered) : base(labelKey)
+    {
+        Spots = All.Select(spot => new PlaceSpot(spot.Key, spot.LabelKey, offered.Length == 0 || offered.Contains(spot.Key))).ToList();
+        _key = chosen;
+        Mark();
+    }
+
+    public IReadOnlyList<PlaceSpot> Spots { get; }
+
+    /// <summary>Where the chosen spot lies across and down the page (0, 0.5 or 1 each); the middle when none is chosen.</summary>
+    public (double X, double Y) Share
+    {
+        get
+        {
+            var index = Math.Max(0, All.Select(spot => spot.Key).ToList().IndexOf(Key ?? "Center"));
+            return (index % 3 / 2.0, index / 3 / 2.0);
+        }
+    }
+
+    partial void OnKeyChanged(string? value) => Mark();
+
+    private void Mark()
+    {
+        foreach (var spot in Spots) spot.IsChosen = spot.Key == Key;
+    }
+
+    [RelayCommand]
+    private void Choose(PlaceSpot spot)
+    {
+        if (spot.IsOffered) Key = spot.Key;
+    }
 }
 
 public partial class CheckItem(string key, string label, bool isChecked = false) : ObservableObject

@@ -443,11 +443,22 @@ public partial class MainViewModel : LocalizedObject
 
     // ---- pages and rendering ------------------------------------------------------------------------------------
 
+    /// <summary>
+    /// Tells the fields of the active tool that choose pages what is selected, so each can say which pages its
+    /// choice comes to.
+    /// </summary>
+    private void ShowPageChoice()
+    {
+        foreach (var field in SelectedTool.Fields.SelectMany(field => field is RowField row ? row.Fields : [field]).OfType<PagesField>())
+            field.Show(SelectedPageIndexes, CurrentPageIndex, Pages.Count);
+    }
+
     public void SetSelection(IReadOnlyList<int> indexes, int? current)
     {
         SelectedPageIndexes = indexes;
         if (current is { } index && index != CurrentPageIndex) CurrentPageIndex = index;
         else InvalidatePreview();
+        ShowPageChoice();
         // What Apply will do depends on the selection; saying so does not have to wait for the page to be drawn.
         ApplySummary = Summarise(SelectedTool);
         Guard(() => SelectedTool.PagesSelected(this));
@@ -456,6 +467,7 @@ public partial class MainViewModel : LocalizedObject
     partial void OnCurrentPageIndexChanged(int value)
     {
         OnPropertyChanged(nameof(PageLabel));
+        ShowPageChoice();
         ApplySummary = Summarise(SelectedTool);
         _ = PageChanged();
     }
@@ -631,6 +643,7 @@ public partial class MainViewModel : LocalizedObject
         CurrentPageIndex = valid[0];
         SelectedPageIndexes = valid;
         PagesRebuilt?.Invoke();
+        ShowPageChoice();
     }
 
     // ---- the page list: adding, moving, removing and taking out pages ----------------------------------------------
@@ -873,6 +886,9 @@ public partial class MainViewModel : LocalizedObject
         _previewDelay?.Cancel();
         _previewDelay = null;
         var tool = SelectedTool;
+        // Whatever asks for a new preview (another page, another selection, another tool) may also have changed
+        // which pages the tool is going to work on.
+        ShowPageChoice();
         ApplySummary = Summarise(tool);
         if (!ShowPreview || _previewHeld || !tool.HasPreview || !HasDocument)
         {
@@ -1017,6 +1033,8 @@ public partial class MainViewModel : LocalizedObject
     private void OnToolPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(Tool.CanvasMode) or "" or null) OnPropertyChanged(nameof(CanvasMode));
+        // A tool may have something to apply only once it has found something (pages that are turned).
+        if (e.PropertyName is nameof(Tool.HasApply) or "" or null) OnPropertyChanged(nameof(ShowApply));
         // A tool may be able to preview with some settings and not with others (a batch of files has no page to show).
         if (e.PropertyName != nameof(Tool.HasPreview)) return;
         OnPropertyChanged(nameof(CanPreview));

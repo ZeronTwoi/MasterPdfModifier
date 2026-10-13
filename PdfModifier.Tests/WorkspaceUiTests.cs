@@ -65,6 +65,9 @@ public class WorkspaceUiTests
 
     private static List<SheetArea> Frames(MainViewModel vm) => vm.Objects.Select(o => o.Model).OfType<SheetArea>().ToList();
 
+    /// <summary>What the tool says about the sheet on view: the first of its notes that is shown.</summary>
+    private static string Note(Tool tool) => tool.Fields.OfType<InfoField>().First(field => field.IsVisible).Text;
+
     private static async Task<(MainWindow, MainViewModel, SheetTool)> Cutting(byte[] pdf, int frames)
     {
         var (window, vm) = Start();
@@ -117,7 +120,7 @@ public class WorkspaceUiTests
         order.Select("click");
         await Settle();
         Assert.All(Frames(vm), frame => Assert.Equal("", frame.Label));
-        Assert.Equal(Loc.Format("SheetClickHint", 0, 4), tool.Fields.OfType<InfoField>().First().Text);
+        Assert.Equal(Loc.Format("SheetClickHint", 0, 4), Note(tool));
 
         // Lower right first, then upper left, then the other two: each click on the sheet gives the next place.
         var (w, h) = (vm.PageWidth, vm.PageHeight);
@@ -126,7 +129,7 @@ public class WorkspaceUiTests
         Click(window, vm, w * 0.75, h * 0.25);
         await Settle();
         Assert.Equal(["2", "3", "", "1"], Frames(vm).Select(f => f.Label));
-        Assert.Equal(Loc.Format("SheetClickHint", 3, 4), tool.Fields.OfType<InfoField>().First().Text);
+        Assert.Equal(Loc.Format("SheetClickHint", 3, 4), Note(tool));
         Capture(window, "23-sheet-click-order");
 
         // The last one is chosen from the pictures in the panel instead.
@@ -186,7 +189,7 @@ public class WorkspaceUiTests
     public async Task ASheetCanBeDividedEvenlyWhenNothingIsFoundOnIt()
     {
         var (window, vm, tool) = await Cutting(TestPdf.WithText(842, 595, "One page, as far as can be told"), 1);
-        Assert.Equal(Loc.Get("SheetFoundOne"), tool.Fields.OfType<InfoField>().First().Text);
+        Assert.Equal(Loc.Get("SheetFoundOne"), Note(tool));
         Assert.Equal(Loc.Get("SummarySheetWhole"), vm.ApplySummary);
 
         Field<ChoiceField>(tool, "SheetLayout").Select("two");

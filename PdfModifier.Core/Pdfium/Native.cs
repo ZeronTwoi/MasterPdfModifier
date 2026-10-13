@@ -186,6 +186,7 @@ internal static unsafe class Native
     [DllImport(Lib)] public static extern int FPDFText_IsGenerated(nint textPage, int index);
     [DllImport(Lib)] public static extern int FPDFText_GetCharBox(nint textPage, int index, double* left, double* right, double* bottom, double* top);
     [DllImport(Lib)] public static extern nint FPDFText_GetTextObject(nint textPage, int index);
+    [DllImport(Lib)] public static extern float FPDFText_GetCharAngle(nint textPage, int index);
     [DllImport(Lib)] public static extern int FPDFText_GetFillColor(nint textPage, int index, uint* r, uint* g, uint* b, uint* a);
 
     // ---- fpdf_ppo.h ----

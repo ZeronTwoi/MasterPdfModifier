@@ -19,6 +19,11 @@ namespace PdfModifier.ViewModels.Tools;
 /// How readily a sheet is divided is set with a slider. Where the result is a close call the frames turn red, and so
 /// does the mark the sheet carries in the page list, so that a look over the list shows what needs checking.
 /// </para>
+/// <para>
+/// What lies around a page without being page (the dark of the scanner around a book, the shadow in its fold) is left
+/// out of its frame: looked for by the app, as closely as another slider says, or taken off as strips set by hand.
+/// A frame whose edge could not be settled is red like one of a doubtful division.
+/// </para>
 /// </summary>
 public sealed class SheetTool : Tool
 {
@@ -41,6 +46,9 @@ public sealed class SheetTool : Tool
 
         /// <summary>Its place among the pages the user has clicked so far.</summary>
         public int? Clicked { get; set; }
+
+        /// <summary>True while it is not certain where the page ends, and nobody has looked at it yet.</summary>
+        public bool Unsure { get; set; }
     }
 
     /// <summary>What is going to happen to one sheet.</summary>
@@ -57,18 +65,34 @@ public sealed class SheetTool : Tool
         /// <summary>True for a sheet that is to stay as it is, whatever was found on it.</summary>
         public bool Skip { get; set; }
 
+        /// <summary>
+        /// True once a frame was moved, drawn or removed by hand. Such a sheet is its owner's: the settings no longer
+        /// change it until its pages are found again.
+        /// </summary>
+        public bool ByHand { get; set; }
+
+        /// <summary>True while anything about the sheet is a close call: how it divides, or where one of its pages ends.</summary>
+        public bool InDoubt => Doubtful || Pieces.Any(piece => piece.Unsure);
+
         /// <summary>A small picture of the sheet, from which the pictures of its pages are cut.</summary>
         public Bitmap? Picture { get; set; }
     }
 
-    private sealed record Division(string Key, int Columns, int Rows, double Sensitivity);
+    private sealed record Division(string Key, int Columns, int Rows, double Sensitivity, SheetEdges Edges);
+
+    /// <summary>
+    /// What is known about a sheet: how many pages are on it, whether cutting to them changes it at all, and whether
+    /// how it divides or where its pages end is a close call.
+    /// </summary>
+    private readonly record struct Outlook(int Pages, bool Cut, bool Doubtful, bool Edges);
 
     private readonly MainViewModel _main;
     private readonly PagesField _pages;
     private readonly ChoiceField _layout, _order;
-    private readonly SliderField _sensitivity;
+    private readonly ModeField _edges;
+    private readonly SliderField _sensitivity, _closeness, _stripLeft, _stripTop, _stripRight, _stripBottom, _stripBetween;
     private readonly NumberField _columns, _rows;
-    private readonly InfoField _found, _hint;
+    private readonly InfoField _found, _hint, _stripHint, _byHand;
     private readonly PieceListField _result;
     private readonly ActionField _add, _remove, _again, _restart, _confirm, _leave, _take;
     private readonly BoolField _keep;
@@ -89,16 +113,30 @@ public sealed class SheetTool : Tool
         _main = main;
         _pages = Add(new PagesField());
         _pages.Scope = _pages.Scopes[1];
-        _layout = Add(new ChoiceField("SheetLayout",
-            new Choice("auto", "SheetLayoutAuto"), new Choice("two", "SheetLayoutTwo"), new Choice("stack", "SheetLayoutStack"),
-            new Choice("four", "SheetLayoutFour"), new Choice("grid", "SheetLayoutGrid")));
+        // How the sheet is divided and how its pages are put in order: a drawing for each way, with what it stands
+        // for written out under the one that is chosen.
+        _layout = Add(new ModeField("SheetLayout",
+            new Choice("auto", "SheetLayoutAuto") { Icon = Controls.Icons.LayoutAuto }, new Choice("two", "SheetLayoutTwo") { Icon = Controls.Icons.LayoutTwo },
+            new Choice("stack", "SheetLayoutStack") { Icon = Controls.Icons.LayoutStack }, new Choice("four", "SheetLayoutFour") { Icon = Controls.Icons.LayoutFour },
+            new Choice("grid", "SheetLayoutGrid") { Icon = Controls.Icons.LayoutGrid }));
         _sensitivity = Add(new SliderField("SheetSensitivity", 50, 0, 100, 5));
         _columns = new NumberField("SheetColumns", 3, 1, 12);
         _rows = new NumberField("SheetRows", 2, 1, 12);
         Add(new RowField(_columns, _rows));
-        _order = Add(new ChoiceField("SheetOrder",
-            new Choice("auto", "SheetOrderAuto"), new Choice("rows", "SheetOrderRows"), new Choice("rtl", "SheetOrderRtl"),
-            new Choice("columns", "SheetOrderColumns"), new Choice("click", "SheetOrderClick")));
+        _edges = Add(new ModeField("SheetEdges",
+            new Choice("auto", "SheetEdgesAuto"), new Choice("hand", "SheetEdgesHand"), new Choice("keep", "SheetEdgesKeep")));
+        _closeness = Add(new SliderField("SheetCloseness", 50, 0, 100, 5));
+        _stripHint = Add(new InfoField());
+        _stripHint.SetKey("SheetStripHint");
+        _stripLeft = Add(new SliderField("SheetStripLeft", 0, 0, 30, 0.5m, "0.#"));
+        _stripRight = Add(new SliderField("SheetStripRight", 0, 0, 30, 0.5m, "0.#"));
+        _stripTop = Add(new SliderField("SheetStripTop", 0, 0, 30, 0.5m, "0.#"));
+        _stripBottom = Add(new SliderField("SheetStripBottom", 0, 0, 30, 0.5m, "0.#"));
+        _stripBetween = Add(new SliderField("SheetStripBetween", 0, 0, 30, 0.5m, "0.#"));
+        _order = Add(new ModeField("SheetOrder",
+            new Choice("auto", "SheetOrderAuto") { Icon = Controls.Icons.ForTool("PageNumbers") }, new Choice("rows", "SheetOrderRows") { Icon = Controls.Icons.OrderRows },
+            new Choice("rtl", "SheetOrderRtl") { Icon = Controls.Icons.OrderRowsBack }, new Choice("columns", "SheetOrderColumns") { Icon = Controls.Icons.OrderColumns },
+            new Choice("click", "SheetOrderClick") { Icon = Controls.Icons.OrderClick }));
         _found = Add(new InfoField());
         _confirm = new ActionField("SheetConfirm", () => Do(Confirm));
         _leave = new ActionField("SheetLeave", () => Do(() => Skip(true)));
@@ -113,13 +151,19 @@ public sealed class SheetTool : Tool
         _add = new ActionField("SheetAdd", () => Do(StartDrawing));
         _remove = new ActionField("SheetRemove", () => Do(RemoveSelected));
         Add(new RowField(_add, _remove));
+        _byHand = Add(new InfoField());
+        _byHand.SetKey("SheetByHand");
         _again = Add(new ActionField("SheetAgain", () => FindAgain()));
 
-        _layout.PropertyChanged += OnDivisionChanged;
-        _columns.PropertyChanged += OnDivisionChanged;
-        _rows.PropertyChanged += OnDivisionChanged;
-        _sensitivity.PropertyChanged += OnDivisionChanged;
-        _pages.PropertyChanged += (_, _) => Survey();
+        foreach (var field in new Field[]
+                 {
+                     _layout, _columns, _rows, _sensitivity, _edges, _closeness, _stripLeft, _stripTop, _stripRight, _stripBottom, _stripBetween
+                 })
+            field.PropertyChanged += OnDivisionChanged;
+        _pages.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(PagesField.Scope) or nameof(PagesField.Range)) Survey();
+        };
         _order.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(ChoiceField.Selected)) OrderChanged();
@@ -133,13 +177,22 @@ public sealed class SheetTool : Tool
 
     private bool ByClicking => _order.Key == "click";
 
+    /// <summary>What is done about the edges of the pages found, as the panel says.</summary>
+    private SheetEdges Edges() => _edges.Key switch
+    {
+        "auto" => SheetEdges.Automatic(_closeness.Number / 100),
+        "hand" => SheetEdges.ByHand(_stripLeft.Number / 100, _stripTop.Number / 100, _stripRight.Number / 100, _stripBottom.Number / 100,
+            _stripBetween.Number / 100),
+        _ => SheetEdges.AsFound
+    };
+
     private Division Dividing() => _layout.Key switch
     {
-        "two" => new Division("grid", 2, 1, 0),
-        "stack" => new Division("grid", 1, 2, 0),
-        "four" => new Division("grid", 2, 2, 0),
-        "grid" => new Division("grid", (int)_columns.Number, (int)_rows.Number, 0),
-        _ => new Division("auto", 0, 0, _sensitivity.Number / 100)
+        "two" => new Division("grid", 2, 1, 0, Edges()),
+        "stack" => new Division("grid", 1, 2, 0, Edges()),
+        "four" => new Division("grid", 2, 2, 0, Edges()),
+        "grid" => new Division("grid", (int)_columns.Number, (int)_rows.Number, 0, Edges()),
+        _ => new Division("auto", 0, 0, _sensitivity.Number / 100, Edges())
     };
 
     private static Task Do(Action action)
@@ -153,11 +206,15 @@ public sealed class SheetTool : Tool
         var shown = _plan is { Skip: false };
         _columns.IsVisible = _rows.IsVisible = _layout.Key == "grid";
         _sensitivity.IsVisible = _layout.Key == "auto";
+        _closeness.IsVisible = _edges.Key == "auto";
+        _stripHint.IsVisible = _stripLeft.IsVisible = _stripTop.IsVisible = _stripRight.IsVisible = _stripBottom.IsVisible =
+            _stripBetween.IsVisible = _edges.Key == "hand";
+        _byHand.IsVisible = _plan is { ByHand: true, Skip: false };
         _restart.IsVisible = shown && ByClicking && _plan is { Pieces.Count: > 1 };
         _remove.IsVisible = shown && _main.SelectedObject?.Model is SheetArea;
         _result.IsVisible = shown && _plan is { Pieces.Count: > 0 };
         _hint.IsVisible = _add.IsVisible = _again.IsVisible = shown;
-        _confirm.IsVisible = _plan is { Doubtful: true, Skip: false };
+        _confirm.IsVisible = _plan is { InDoubt: true, Skip: false };
         _leave.IsVisible = shown;
         _take.IsVisible = _plan is { Skip: true };
     }
@@ -165,8 +222,8 @@ public sealed class SheetTool : Tool
     // ---- finding the pages of the sheet on view -----------------------------------------------------------------
 
     private static SheetFinding Find(PdfView view, int page, Division division) => division.Key == "auto"
-        ? PdfSheets.Find(view, page, division.Sensitivity)
-        : new SheetFinding(PdfSheets.Grid(view, page, division.Columns, division.Rows), 1, false);
+        ? PdfSheets.Find(view, page, division.Sensitivity, division.Edges)
+        : PdfSheets.Divide(view, page, division.Columns, division.Rows, division.Edges);
 
     public override async Task RefreshAsync(MainViewModel main)
     {
@@ -209,7 +266,7 @@ public sealed class SheetTool : Tool
             }
 
             plan = new Plan(page) { Doubtful = finding.Doubtful };
-            foreach (var area in finding.Pages) plan.Pieces.Add(NewPiece(plan, area));
+            for (var i = 0; i < finding.Pages.Count; i++) plan.Pieces.Add(NewPiece(plan, finding.Pages[i], finding.EdgeInDoubt(i)));
             _plans[page] = plan;
             _findings.Remove(page);
         }
@@ -224,10 +281,13 @@ public sealed class SheetTool : Tool
         Survey();
     }
 
-    private static Piece NewPiece(Plan plan, RectD area) => new(new CanvasObject(new SheetArea
+    private static Piece NewPiece(Plan plan, RectD area, bool unsure = false) => new(new CanvasObject(new SheetArea
     {
-        Id = plan.Pieces.Select(p => p.Frame.Id).DefaultIfEmpty().Max() + 1, Bounds = area, Doubtful = plan.Doubtful
-    }));
+        Id = plan.Pieces.Select(p => p.Frame.Id).DefaultIfEmpty().Max() + 1, Bounds = area, Doubtful = plan.Doubtful || unsure
+    }))
+    {
+        Unsure = unsure
+    };
 
     /// <summary>Makes a plan the one on view; the picture of the sheet shown before is let go.</summary>
     private void Show(Plan? plan)
@@ -245,13 +305,23 @@ public sealed class SheetTool : Tool
         _plan = plan;
     }
 
-    private void DropPlans()
+    /// <summary>
+    /// Forgets what was found on the sheets. With <paramref name="keepByHand"/> the sheets whose frames were set by
+    /// hand stay as they are: other settings are no reason to throw away what somebody has put right.
+    /// </summary>
+    private void DropPlans(bool keepByHand = false)
     {
         _survey?.Cancel();
         _survey = null;
         Show(null);
-        _plans.Clear();
         _findings.Clear();
+        if (keepByHand)
+        {
+            foreach (var page in _plans.Where(plan => !plan.Value.ByHand).Select(plan => plan.Key).ToList()) _plans.Remove(page);
+            return;
+        }
+
+        _plans.Clear();
         _document = null;
         _main.SetPageBadges(null);
     }
@@ -375,31 +445,40 @@ public sealed class SheetTool : Tool
         if (!cancel.IsCancellationRequested) OnSettingsChanged();
     }
 
-    /// <summary>What is known about a sheet: how many pages it will be cut into (1: left whole) and whether that is doubtful.</summary>
-    private (int Pages, bool Doubtful)? Known(int page)
+    /// <summary>What is known about a sheet so far; null for one that has not been looked at yet.</summary>
+    private Outlook? Known(int page)
     {
         var size = _main.Session.View is { } view && page < view.PageCount ? view.Pages[page] : default;
         if (_plans.TryGetValue(page, out var plan))
         {
-            if (plan.Skip) return (1, false);
-            return (Worth(plan.Pieces.Select(p => p.Area).ToList(), size) ? plan.Pieces.Count : 1, plan.Doubtful);
+            if (plan.Skip) return new Outlook(1, false, false, false);
+            return new Outlook(plan.Pieces.Count, Worth(plan.Pieces.Select(p => p.Area).ToList(), size), plan.Doubtful, plan.Pieces.Any(p => p.Unsure));
         }
 
-        if (_findings.TryGetValue(page, out var finding)) return (Worth(finding.Pages, size) ? finding.Pages.Count : 1, finding.Doubtful);
+        if (_findings.TryGetValue(page, out var finding))
+            return new Outlook(finding.Pages.Count, Worth(finding.Pages, size), finding.Doubtful, finding.AnyEdgeInDoubt);
         return null;
     }
 
-    /// <summary>Marks the sheets in the page list: with the number of pages each becomes, in red where that is not certain.</summary>
+    /// <summary>
+    /// Marks the sheets in the page list: with the number of pages each becomes, in red where how it divides or where
+    /// its pages end is not certain.
+    /// </summary>
     private void MarkPages(IReadOnlyList<int> pages)
     {
         var badges = new Dictionary<int, PageBadge>();
         foreach (var page in pages)
         {
-            if (Known(page) is not var (count, doubtful)) continue;
-            if (doubtful)
+            if (Known(page) is not { } known) continue;
+            var count = known.Cut && known.Pages > 1 ? known.Pages : 1;
+            if (known.Doubtful)
                 badges[page] = new PageBadge(count > 1 ? $"{count}?" : "?", true, Loc.Get("SheetBadgeDoubt"));
+            else if (known.Edges)
+                badges[page] = new PageBadge(count > 1 ? $"{count}?" : "?", true, Loc.Get("SheetBadgeEdges"));
             else if (count > 1)
                 badges[page] = new PageBadge(count.ToString(), false, Loc.Format("SheetBadgeCut", count));
+            else if (known.Cut)
+                badges[page] = new PageBadge("1", false, Loc.Get("SheetBadgeCrop"));
         }
 
         _main.SetPageBadges(badges);
@@ -445,8 +524,9 @@ public sealed class SheetTool : Tool
         {
             var piece = ordered[i];
             var label = ByClicking && piece.Clicked == null ? "" : (i + 1).ToString();
-            if (piece.Frame.Model is SheetArea area && (area.Label != label || area.Doubtful != plan.Doubtful))
-                piece.Frame.Model = area with { Label = label, Doubtful = plan.Doubtful };
+            var red = plan.Doubtful || piece.Unsure;
+            if (piece.Frame.Model is SheetArea area && (area.Label != label || area.Doubtful != red))
+                piece.Frame.Model = area with { Label = label, Doubtful = red };
             var item = new PieceItem(piece) { Label = label.Length > 0 ? label : "?", Aspect = piece.Area.Width / Math.Max(1, piece.Area.Height) };
             if (plan.Picture is { } picture && _main.PageWidth > 0 && _main.PageHeight > 0)
             {
@@ -490,6 +570,7 @@ public sealed class SheetTool : Tool
         if (plan.Skip) _found.SetKey("SheetSkipped");
         else if (count == 0) _found.SetKey("SheetNone");
         else if (plan.Doubtful) _found.SetText(count == 1 ? Loc.Get("SheetDoubtWhole") : Loc.Format("SheetDoubtSplit", count));
+        else if (plan.InDoubt) _found.SetText(count == 1 ? Loc.Get("SheetDoubtEdgeOne") : Loc.Format("SheetDoubtEdges", count));
         else if (count == 1) _found.SetKey("SheetFoundOne");
         else if (ByClicking) _found.SetText(Loc.Format("SheetClickHint", plan.Pieces.Count(p => p.Clicked != null), count));
         else if (_order.Key != "auto") _found.SetText(Loc.Format("SheetFound", count));
@@ -526,15 +607,16 @@ public sealed class SheetTool : Tool
         var settling = _settling = new CancellationTokenSource();
         try
         {
-            if (ReferenceEquals(sender, _sensitivity)) await Task.Delay(180, settling.Token);
+            if (sender is SliderField) await Task.Delay(180, settling.Token);
         }
         catch (OperationCanceledException)
         {
             return;
         }
 
-        // Another way of dividing the sheets applies to all of them, also those looked at already.
-        DropPlans();
+        // Other settings apply to all sheets, also those looked at already. Only where somebody has set the frames
+        // by hand do they stay as they are.
+        DropPlans(keepByHand: true);
         if (ReferenceEquals(_main.SelectedTool, this)) await _main.RefreshTool();
     }
 
@@ -549,6 +631,7 @@ public sealed class SheetTool : Tool
     {
         if (_plan is not { } plan) return;
         plan.Doubtful = false;
+        foreach (var piece in plan.Pieces) piece.Unsure = false;
         Renumber();
     }
 
@@ -596,8 +679,11 @@ public sealed class SheetTool : Tool
     private void Changed(Plan plan)
     {
         plan.Reading?.Cancel();
-        // Frames set by hand are what their owner wants: there is nothing left to doubt.
+        // Frames set by hand are what their owner wants: there is nothing left to doubt, and nothing for the
+        // settings to change.
         plan.Doubtful = false;
+        plan.ByHand = true;
+        foreach (var piece in plan.Pieces) piece.Unsure = false;
         if (plan.Numbers != Numbers.Unavailable) plan.Numbers = Numbers.Unread;
         foreach (var piece in plan.Pieces) piece.Number = null;
         Renumber();
@@ -701,7 +787,7 @@ public sealed class SheetTool : Tool
         if (pages.Count > 1)
         {
             var text = worth ? Loc.Format("SummarySheets", pages.Count, plan.Pieces.Count) : Loc.Format("SummarySheetsSkip", pages.Count);
-            var doubtful = pages.Count(page => Known(page) is (_, true));
+            var doubtful = pages.Count(page => Known(page) is { } known && (known.Doubtful || known.Edges));
             return doubtful > 0 ? text + " " + Loc.Format("SummarySheetsDoubt", doubtful) : text;
         }
 
@@ -756,12 +842,12 @@ public sealed class SheetTool : Tool
                         unread[page] = plan.Pieces.Select(p => p.Area).ToList();
                     else
                         shown[page] = Ordered(plan).Select(p => p.Area).ToList();
-                    if (plan.Doubtful) doubtful.Add(page);
+                    if (plan.InDoubt) doubtful.Add(page);
                 }
                 else if (_findings.TryGetValue(page, out var finding))
                 {
                     unread[page] = finding.Pages;
-                    if (finding.Doubtful) doubtful.Add(page);
+                    if (finding.Doubtful || finding.AnyEdgeInDoubt) doubtful.Add(page);
                 }
             }
 

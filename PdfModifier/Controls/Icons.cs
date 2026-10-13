@@ -33,6 +33,28 @@ public static class Icons
     public static Geometry Drop { get; } = Parse("M12 4 v11 M7 10 l5 5 5 -5 M4 15 v3 a2 2 0 0 0 2 2 h12 a2 2 0 0 0 2 -2 v-3");
 
     public static Geometry Pin { get; } = Parse("M9 3 h6 M10 3 v6 l-3 4 h10 l-3 -4 v-6 M12 13 v8");
+
+    // What is done to pages: turning, mirroring, moving
+    public static Geometry RotateHalf { get; } = Parse("M4.5 10 a8 8 0 0 1 14.6 -2 M20 3 v5 h-5 M19.5 14 a8 8 0 0 1 -14.6 2 M4 21 v-5 h5");
+    public static Geometry MirrorAcross { get; } = Parse("M12 3 v2 M12 8 v2 M12 13 v2 M12 18 v3 M9 7 l-6 5 6 5 z M15 7 l6 5 -6 5 z");
+    public static Geometry MirrorDown { get; } = Parse("M3 12 h2 M8 12 h2 M13 12 h2 M18 12 h3 M7 9 l5 -6 5 6 z M7 15 l5 6 5 -6 z");
+    public static Geometry Up { get; } = Parse("M12 19 v-14 M6 11 l6 -6 6 6");
+    public static Geometry Down { get; } = Parse("M12 5 v14 M6 13 l6 6 6 -6");
+    public static Geometry ToStart { get; } = Parse("M5 4 h14 M12 20 v-12 M7 13 l5 -5 5 5");
+    public static Geometry ToEnd { get; } = Parse("M5 20 h14 M12 4 v12 M7 11 l5 5 5 -5");
+    public static Geometry Reverse { get; } = Parse("M8 4 v16 M4 8 l4 -4 4 4 M16 20 v-16 M12 16 l4 4 4 -4");
+
+    // How a sheet is divided into pages, and the order they are taken in
+    private const string Sheet = "M5 4 h14 a1 1 0 0 1 1 1 v14 a1 1 0 0 1 -1 1 h-14 a1 1 0 0 1 -1 -1 v-14 a1 1 0 0 1 1 -1 z ";
+    public static Geometry LayoutAuto { get; } = Parse(Sheet + "M12 7.5 l1.3 3.2 3.2 1.3 -3.2 1.3 -1.3 3.2 -1.3 -3.2 -3.2 -1.3 3.2 -1.3 z");
+    public static Geometry LayoutTwo { get; } = Parse(Sheet + "M12 4 v16");
+    public static Geometry LayoutStack { get; } = Parse(Sheet + "M4 12 h16");
+    public static Geometry LayoutFour { get; } = Parse(Sheet + "M12 4 v16 M4 12 h16");
+    public static Geometry LayoutGrid { get; } = Parse(Sheet + "M9.3 4 v16 M14.7 4 v16 M4 9.3 h16 M4 14.7 h16");
+    public static Geometry OrderRows { get; } = Parse("M5 6.5 h14 l-14 11 h13 M15.5 14.8 l3 2.7 -3 2.7");
+    public static Geometry OrderRowsBack { get; } = Parse("M19 6.5 h-14 l14 11 h-13 M8.5 14.8 l-3 2.7 3 2.7");
+    public static Geometry OrderColumns { get; } = Parse("M6.5 5 v14 l11 -14 v13 M14.8 15.5 l2.7 3 2.7 -3");
+    public static Geometry OrderClick { get; } = Parse("M6 3 l12 8.5 -5.3 1.2 3.1 6 -2.4 1.3 -3.2 -6 -4.2 3.7 z");
     public static Geometry Settings => ForTool("Settings");
 
     private static readonly Dictionary<string, Geometry> Tools = new()

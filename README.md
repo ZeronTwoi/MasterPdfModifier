@@ -27,7 +27,7 @@
 | Group | Tools |
 | --- | --- |
 | **Edit** | Change the text and images of a page, add text boxes and pictures, erase · add a watermark · remove watermarks · page numbers · flatten · metadata |
-| **Pages** | Merge · split · cut a sheet that shows several pages into pages of their own · rotate · delete · reorder · insert (blank pages, other PDFs, images) · extract (to PDF or PNG/JPEG/WebP) · scale · crop |
+| **Pages** | Merge · split · cut a sheet that shows several pages into pages of their own, without the scanner edge and shadows around them · turn and mirror, and set upright the pages that lie on their side · delete · reorder · insert (blank pages, other PDFs, images) · extract (to PDF or PNG/JPEG/WebP) · scale · crop |
 | **Optimise** | Compress one document or a whole folder · improve the clarity of scans · make scans searchable (OCR) · automate a chain of steps |
 | **Review and protect** | Compare two PDFs · protect with a password |
 
@@ -36,12 +36,15 @@
 - **Scans are not second-class.** Most PDFs people actually have are pictures of pages. Text is found in them by
   text recognition and can be changed; watermarks are removed whether they lie over the page or are part of the
   scanned picture; pages that mix a scan with typed text have both kinds offered side by side.
-- **You see what a tool will do before it does it.** Watermarks, page numbers, rotation, scaling, compression,
-  clean-up and watermark removal are shown on the page while you change their settings, marked as a preview.
-  Nothing changes until you press Apply, and everything can be undone.
-- **It says when it is not sure.** Where the app decides something by itself (where one page ends on a sheet, what a
-  blurry line says), a slider sets how readily it decides, and what it doubts is marked red so you can check,
-  correct or leave it out.
+- **You see what a tool will do before it does it.** Watermarks, page numbers, scaling, compression, clean-up and
+  watermark removal are shown on the page while you change their settings, marked as a preview. Nothing changes
+  until you press Apply, and everything can be undone.
+- **It says when it is not sure.** Where the app decides something by itself (how a sheet divides into pages, where
+  a page ends, which pages are turned, what a blurry line says), a slider sets how readily it decides, and what it
+  doubts is marked red so you can check, correct or leave it out.
+- **Settings are quick to set.** Choices are buttons that are all on view, not lists to open; the values wanted most
+  stand under their sliders; where something goes on a page is clicked on a small picture of one; and every tool
+  says which pages it is going to work on.
 - **Your files stay on your computer.** No account, no upload, no tracking. The only things ever fetched from the
   internet are what text recognition needs (language data from the official Tesseract project and, where it is
   missing, the runtime or program it runs on), and only after the app has asked you.

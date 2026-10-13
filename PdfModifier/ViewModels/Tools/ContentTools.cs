@@ -56,15 +56,18 @@ internal sealed class FileCache
     }
 }
 
+/// <summary>
+/// Stamps text or an image across pages: once, at a spot chosen on a small picture of a page or by a click on the
+/// page itself, or repeated all over it. The page on view shows the result as the settings change.
+/// </summary>
 public sealed class WatermarkTool : Tool
 {
     private readonly PagesField _pages;
-    private readonly ModeField _type;
-    private readonly ChoiceField _layout;
+    private readonly ModeField _type, _layout;
+    private readonly PlaceField _place;
     private readonly TextField _text;
     private readonly ColorField _color;
-    private readonly NumberField _size;
-    private readonly SliderField _opacity, _rotation, _imageScale;
+    private readonly SliderField _size, _opacity, _rotation, _imageScale;
     private readonly ToggleField _bold;
     private readonly FileField _image;
     private readonly InfoField _placeHint;
@@ -76,18 +79,18 @@ public sealed class WatermarkTool : Tool
         _pages = Add(new PagesField());
         _type = Add(new ModeField("WatermarkType", new Choice("text", "WatermarkText"), new Choice("image", "WatermarkImage")));
         _text = Add(new TextField("WatermarkTextValue", "CONFIDENTIAL"));
-        _size = new NumberField("FontSize", 54, 6, 400, 2);
+        _size = new SliderField("FontSize", 54, 6, 300, 2);
         _bold = new ToggleField("Bold", "B", true);
         Add(new RowField(_size, _bold));
         _color = Add(new ColorField("TextColor", "#808080").WithPicker(main));
         _image = Add(new FileField("WatermarkImageFile", true).WithPicker(main));
-        _imageScale = Add(new SliderField("WatermarkImageScale", 50, 2, 200, 1));
-        _opacity = Add(new SliderField("Opacity", 30, 2, 100, 1));
-        _rotation = Add(new SliderField("Rotation", 45, -180, 180, 1));
-        _layout = Add(new ChoiceField("WatermarkLayout",
-            new Choice("center", "WatermarkCenter"), new Choice("tile", "WatermarkTile"), new Choice("place", "WatermarkPlace")));
+        _imageScale = Add(new SliderField("WatermarkImageScale", 50, 2, 200, 1).WithStops(" %", 25, 50, 100));
+        _opacity = Add(new SliderField("Opacity", 30, 2, 100, 1).WithStops(" %", 10, 30, 50, 100));
+        _rotation = Add(new SliderField("Rotation", 45, -180, 180, 1).WithStops("°", 0, 45, -45, 90));
+        _layout = Add(new ModeField("WatermarkLayout", new Choice("once", "WatermarkOnce"), new Choice("tile", "WatermarkRepeated")));
+        _place = Add(new PlaceField("WatermarkWhere", "Center"));
         _placeHint = Add(new InfoField());
-        _placeHint.SetKey("WatermarkPlaceHint");
+        _placeHint.SetKey("WatermarkWhereHint");
         _type.PropertyChanged += (_, _) => Update();
         _layout.PropertyChanged += (_, _) =>
         {
@@ -99,36 +102,49 @@ public sealed class WatermarkTool : Tool
 
     public override bool HasPreview => true;
 
-    /// <summary>While the place is being chosen, a click on the page says where the middle of the watermark goes.</summary>
-    public override CanvasMode CanvasMode => _layout.Key == "place" ? CanvasMode.Click : CanvasMode.Select;
+    /// <summary>
+    /// A single watermark can be put anywhere with a click on the page; the page is still moved by dragging it.
+    /// </summary>
+    public override CanvasMode CanvasMode => _layout.Key == "once" ? CanvasMode.Click : CanvasMode.Select;
 
     private void Update()
     {
         var text = _type.Key == "text";
         _text.IsVisible = _size.IsVisible = _color.IsVisible = _bold.IsVisible = text;
         _image.IsVisible = _imageScale.IsVisible = !text;
-        _placeHint.IsVisible = _layout.Key == "place";
+        _place.IsVisible = _placeHint.IsVisible = _layout.Key == "once";
     }
 
     public override Task PageClicked(MainViewModel main, double x, double y)
     {
-        if (_layout.Key != "place" || main.PageWidth <= 0 || main.PageHeight <= 0) return Task.CompletedTask;
+        if (_layout.Key != "once" || main.PageWidth <= 0 || main.PageHeight <= 0) return Task.CompletedTask;
         // Kept as a share of the page, so the mark lands in the same spot on pages of another size.
         (_centerX, _centerY) = (Math.Clamp(x / main.PageWidth, 0, 1), Math.Clamp(y / main.PageHeight, 0, 1));
+        // None of the ready-made spots any more.
+        _place.Key = null;
         OnSettingsChanged();
         return Task.CompletedTask;
     }
 
+    /// <summary>Where the middle of a single watermark goes, as shares of the page's width and height.</summary>
+    private (double X, double Y) Centre()
+    {
+        if (_place.Key == null) return (_centerX, _centerY);
+        // The spots towards the edges lie a little way in, so that a mark placed there is still on the page.
+        var (across, down) = _place.Share;
+        return (0.2 + 0.6 * across, 0.14 + 0.72 * down);
+    }
+
     private WatermarkOptions Options()
     {
-        var place = _layout.Key == "place";
+        var (x, y) = _layout.Key == "once" ? Centre() : (0.5, 0.5);
         var options = new WatermarkOptions
         {
             Opacity = _opacity.Number / 100,
             RotationDegrees = _rotation.Number,
             Layout = _layout.Key == "tile" ? WatermarkLayout.Tile : WatermarkLayout.Center,
-            CenterX = place ? _centerX : 0.5,
-            CenterY = place ? _centerY : 0.5
+            CenterX = x,
+            CenterY = y
         };
 
         if (_type.Key != "text")
@@ -158,7 +174,7 @@ public sealed class WatermarkTool : Tool
 public sealed class RemoveWatermarkTool : Tool
 {
     private readonly PagesField _pages;
-    private readonly ChoiceField _method;
+    private readonly ModeField _method;
     private readonly ActionField _find;
     private readonly CheckListField _found;
     private readonly InfoField _note, _pageKind;
@@ -176,9 +192,9 @@ public sealed class RemoveWatermarkTool : Tool
     {
         _pages = Add(new PagesField());
         _pageKind = Add(new InfoField());
-        _method = Add(new ChoiceField("WatermarkMethod",
+        _method = Add(new ModeField("WatermarkMethod",
             new Choice("objects", "WatermarkMethodObjects"), new Choice("light", "WatermarkMethodLight"),
-            new Choice("color", "WatermarkMethodColor"), new Choice("cover", "WatermarkMethodCover")));
+            new Choice("color", "WatermarkMethodColor"), new Choice("cover", "WatermarkMethodCover")) { Columns = 1 });
         _find = Add(new ActionField("WatermarkDetect", () => main.RunBusy(Detect)));
         _found = Add(new CheckListField("WatermarkFound"));
         _strength = Add(new SliderField("WatermarkStrength", 50, 0, 100, 1));
@@ -384,36 +400,62 @@ public sealed class RemoveWatermarkTool : Tool
     }
 }
 
+/// <summary>
+/// Numbers the pages. How the number is written is chosen from the usual ways or typed, where it stands is clicked
+/// on a small picture of a page, and the page on view shows the result.
+/// </summary>
 public sealed class PageNumbersTool : Tool
 {
     private readonly PagesField _pages;
+    private readonly ModeField _style;
     private readonly TextField _format;
+    private readonly InfoField _formatHint;
     private readonly ColorField _color;
-    private readonly NumberField _start, _size, _margin;
-    private readonly ChoiceField _position;
+    private readonly NumberField _start;
+    private readonly SliderField _size, _margin;
+    private readonly PlaceField _position;
 
     public PageNumbersTool(MainViewModel main) : base("PageNumbers", "GroupEdit")
     {
         _pages = Add(new PagesField());
+        _style = Add(new ModeField("NumberStyle",
+            new Choice("n", "1", true), new Choice("of", "1 / 9", true), new Choice("dash", "– 1 –", true),
+            new Choice("page", "NumberSamplePage"), new Choice("pageOf", "NumberSamplePageOf"), new Choice("own", "NumberStyleOwn")) { Columns = 3 });
+        _style.Select("of");
         _format = Add(new TextField("NumberFormat", "{n} / {total}"));
-        Add(new InfoField()).SetKey("NumberFormatHint");
+        _formatHint = Add(new InfoField());
+        _formatHint.SetKey("NumberFormatHint");
         _start = Add(new NumberField("NumberStart", 1, 0, 100000));
-        _position = Add(new ChoiceField("Position",
-            new Choice(nameof(StampPosition.BottomCenter), "PosBottomCenter"), new Choice(nameof(StampPosition.BottomRight), "PosBottomRight"),
-            new Choice(nameof(StampPosition.BottomLeft), "PosBottomLeft"), new Choice(nameof(StampPosition.TopCenter), "PosTopCenter"),
-            new Choice(nameof(StampPosition.TopRight), "PosTopRight"), new Choice(nameof(StampPosition.TopLeft), "PosTopLeft")));
-        _size = Add(new NumberField("FontSize", 11, 4, 100, 1, "0.#"));
-        _margin = Add(new NumberField("MarginMm", 10, 0, 200, 1, "0.#"));
+        _position = Add(new PlaceField("Position", nameof(StampPosition.BottomCenter),
+            nameof(StampPosition.TopLeft), nameof(StampPosition.TopCenter), nameof(StampPosition.TopRight),
+            nameof(StampPosition.BottomLeft), nameof(StampPosition.BottomCenter), nameof(StampPosition.BottomRight)));
+        _size = Add(new SliderField("FontSize", 11, 6, 48, 1, "0.#"));
+        _margin = Add(new SliderField("MarginMm", 10, 0, 50, 1, "0.#"));
         _color = Add(new ColorField("TextColor").WithPicker(main));
+        _style.PropertyChanged += (_, _) => Update();
+        Update();
     }
 
     public override bool HasPreview => true;
 
+    private void Update() => _format.IsVisible = _formatHint.IsVisible = _style.Key == "own";
+
+    /// <summary>How the number is written: {n} stands for the number of the page, {total} for the last number.</summary>
+    private string Format() => _style.Key switch
+    {
+        "n" => "{n}",
+        "of" => "{n} / {total}",
+        "dash" => "– {n} –",
+        "page" => Loc.Get("NumberStylePage"),
+        "pageOf" => Loc.Get("NumberStylePageOf"),
+        _ => _format.Value
+    };
+
     private PageNumberOptions Options() => new()
     {
-        Format = _format.Value,
+        Format = Format(),
         StartNumber = (int)_start.Number,
-        Position = Enum.Parse<StampPosition>(_position.Key),
+        Position = Enum.Parse<StampPosition>(_position.Key ?? nameof(StampPosition.BottomCenter)),
         FontSize = _size.Number,
         Margin = _margin.Mm(),
         Color = Parse.Color(_color)
