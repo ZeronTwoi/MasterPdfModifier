@@ -387,6 +387,13 @@ public static partial class Strings
         ["MenuRemove"] = "Remove from the application menu",
         ["MenuAdded"] = "{0} is in the application menu now",
         ["MenuRemoved"] = "{0} was taken out of the application menu",
+
+        // Being told about new versions
+        ["UpdateAsk"] = "Should {0} tell you when a new version is out? It would look once each time it is started, at GitHub, where it is published. Nothing about you or your documents is sent. With a no it never connects for this; the settings can change that later.",
+        ["UpdateNo"] = "No",
+        ["UpdateNotify"] = "Tell me when a new version is out (looks once, each time the app is started)",
+        ["UpdateAvailable"] = "Version {0} is out. You have {1}.",
+        ["UpdateGet"] = "Open the download page",
         ["StatusTextFound"] = "{0} lines of text found",
         ["FontFamily"] = "Font",
         ["FontDefault"] = "Standard (sans-serif)",

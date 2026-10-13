@@ -109,15 +109,25 @@ public sealed class SettingsTool : Tool
 {
     private readonly ChoiceField _language;
     private readonly CheckListField _ocrLanguages;
-    private readonly BoolField _autoDetect;
-    private readonly InfoField _engine;
-    private readonly ActionField _setup, _menuAdd, _menuRemove;
+    private readonly BoolField _autoDetect, _notify;
+    private readonly InfoField _engine, _update;
+    private readonly ActionField _setup, _menuAdd, _menuRemove, _getUpdate;
     private readonly MainViewModel _main;
+    private bool _syncing;
 
     public SettingsTool(MainViewModel main) : base("Settings", "GroupApp")
     {
         _main = main;
         var settings = main.Settings;
+
+        // Only there when a newer version is out: what it is, and the way to it.
+        _update = Add(new InfoField { Warns = true });
+        _getUpdate = Add(new ActionField("UpdateGet", () =>
+        {
+            Process.Start(new ProcessStartInfo(AppInfo.LatestVersionPage) { UseShellExecute = true });
+            return Task.CompletedTask;
+        }));
+        _getUpdate.IsVisible = false;
 
         _language = Add(new ChoiceField("SettingsLanguage", Languages.All.Select(l => new Choice(l.Code, l.NativeName, true)).ToArray()));
         _language.Select(settings.UiLanguage);
@@ -128,6 +138,7 @@ public sealed class SettingsTool : Tool
             settings.Save();
             Loc.SetLanguage(_language.Key);
             RefreshLanguageList();
+            RefreshUpdateNote();
         };
 
         _ocrLanguages = Add(new CheckListField("SettingsOcrLanguages"));
@@ -159,6 +170,14 @@ public sealed class SettingsTool : Tool
         _setup = Add(OcrSetup.Button(main));
         _menuAdd = Add(new ActionField("MenuAdd", () => ChangeMenuEntry(true)));
         _menuRemove = Add(new ActionField("MenuRemove", () => ChangeMenuEntry(false)));
+        _notify = Add(new BoolField("UpdateNotify", settings.UpdateNotice == true));
+        _notify.PropertyChanged += (_, e) =>
+        {
+            // Ticked or cleared by hand, this is the user's answer; the app goes by it from its next start on.
+            if (e.PropertyName != nameof(BoolField.Value) || _syncing || (settings.UpdateNotice == true) == _notify.Value) return;
+            settings.UpdateNotice = _notify.Value;
+            settings.Save();
+        };
         Add(new InfoField()).SetText($"{AppInfo.Name} {AppInfo.Version}");
         Add(new InfoField()).SetKey("AboutText");
         Add(new ActionField("AboutSupport", () =>
@@ -174,7 +193,18 @@ public sealed class SettingsTool : Tool
     public override Task RefreshAsync(MainViewModel main)
     {
         RefreshLanguageList();
+        RefreshUpdateNote();
+        // The answer may have been given since, to the question the app asks at its first start.
+        _syncing = true;
+        _notify.Value = main.Settings.UpdateNotice == true;
+        _syncing = false;
         return Task.CompletedTask;
+    }
+
+    private void RefreshUpdateNote()
+    {
+        _update.SetText(_main.NewVersion is { } version ? Loc.Format("UpdateAvailable", version, AppInfo.Version) : "");
+        _getUpdate.IsVisible = _main.HasNewVersion;
     }
 
     private void RefreshLanguageList()

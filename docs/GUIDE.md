@@ -13,6 +13,7 @@ The short version is on the [main page](../README.md).
 - [Automate](#automate)
 - [Languages](#languages)
 - [What the app fetches by itself](#what-the-app-fetches-by-itself)
+- [New versions](#new-versions)
 - [Getting around](#getting-around)
 - [Good to know](#good-to-know)
 
@@ -156,6 +157,22 @@ that does not read text from pictures works without any of this.
 
 On Linux, an app that was started from the unpacked archive is in no menu. The first time it is started it asks
 whether it should put itself into the application menu; Settings can add or remove that entry later.
+
+## New versions
+
+The first time the app is started it asks whether it should tell you when a new version is out.
+
+- **Yes:** each time the app is started it takes one look: a single request to GitHub, where the app is published,
+  which is answered with the number of the newest version. No page is loaded and nothing about you or your
+  documents is sent. It does not look again while the app is open.
+- **No**, or closing the question: the app never connects for this, and it does not ask again.
+
+When there is a newer version, the settings button at the top gets a warning sign. Settings then say which version
+is out and which one you have, and **Open the download page** leads to it; installing the new version over the old
+one keeps your settings. The box *Tell me when a new version is out* in Settings changes your answer at any time;
+it counts from the next start of the app.
+
+<img src="images/update-notice.png" width="820" alt="The warning sign on the settings button, and the note in Settings that a newer version is out">
 
 ## Getting around
 

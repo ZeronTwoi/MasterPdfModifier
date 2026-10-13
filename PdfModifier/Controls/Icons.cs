@@ -69,6 +69,55 @@ public static class Icons
 }
 
 /// <summary>
+/// The sign for "this wants your attention": a filled triangle with an exclamation mark. Unlike the line drawings it
+/// has a colour of its own, so it stands out among them.
+/// </summary>
+public sealed class WarningSign : Control
+{
+    public static readonly StyledProperty<IBrush?> FillProperty = AvaloniaProperty.Register<WarningSign, IBrush?>(nameof(Fill));
+
+    public static readonly StyledProperty<IBrush?> MarkProperty = AvaloniaProperty.Register<WarningSign, IBrush?>(nameof(Mark));
+
+    private static readonly Geometry Triangle = StreamGeometry.Parse("M12 4 L21 19.5 H3 Z");
+    private static readonly Geometry Exclamation = StreamGeometry.Parse("M12 10 v4.6 M12 17.3 v0.1");
+
+    static WarningSign()
+    {
+        AffectsRender<WarningSign>(FillProperty, MarkProperty);
+        WidthProperty.OverrideDefaultValue<WarningSign>(16);
+        HeightProperty.OverrideDefaultValue<WarningSign>(16);
+    }
+
+    /// <summary>The colour of the triangle.</summary>
+    public IBrush? Fill
+    {
+        get => GetValue(FillProperty);
+        set => SetValue(FillProperty, value);
+    }
+
+    /// <summary>The colour of the exclamation mark on it.</summary>
+    public IBrush? Mark
+    {
+        get => GetValue(MarkProperty);
+        set => SetValue(MarkProperty, value);
+    }
+
+    public override void Render(DrawingContext context)
+    {
+        if (Fill is not { } fill) return;
+        var scale = Math.Min(Bounds.Width, Bounds.Height) / 24;
+        if (scale <= 0) return;
+        using (context.PushTransform(Matrix.CreateScale(scale, scale) *
+                                     Matrix.CreateTranslation((Bounds.Width - 24 * scale) / 2, (Bounds.Height - 24 * scale) / 2)))
+        {
+            // The outline in the colour of the fill rounds the corners off.
+            context.DrawGeometry(fill, new Pen(fill, 3, lineJoin: PenLineJoin.Round), Triangle);
+            if (Mark is { } mark) context.DrawGeometry(null, new Pen(mark, 2.2, lineCap: PenLineCap.Round), Exclamation);
+        }
+    }
+}
+
+/// <summary>
 /// Shows one of the <see cref="Icons"/> in the colour of the text around it. The size is that of the control; the
 /// pen grows with it only a little, so small icons do not turn faint and large ones not heavy.
 /// </summary>

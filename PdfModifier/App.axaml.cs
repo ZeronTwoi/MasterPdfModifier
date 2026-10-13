@@ -28,13 +28,30 @@ public class App : Application
 
             // Files passed on the command line (e.g. "Open with") are opened once the window is up: a PDF as the
             // document, pictures as the pages of a new one.
-            if (desktop.Args?.Where(File.Exists).ToList() is { Count: > 0 } files)
-                window.Opened += async (_, _) => await viewModel.DropFiles(files);
-            else if (DesktopEntry.IsSupported)
-                window.Opened += async (_, _) => await OfferMenuEntry(viewModel);
+            var files = desktop.Args?.Where(File.Exists).ToList() ?? [];
+            window.Opened += async (_, _) =>
+            {
+                if (files.Count > 0) await viewModel.DropFiles(files);
+                else if (DesktopEntry.IsSupported) await OfferMenuEntry(viewModel);
+                await AskAboutUpdates(viewModel);
+                await viewModel.LookForNewVersion();
+            };
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>
+    /// Whether to look for newer versions is the user's to say, and they are asked once, the first time the app is
+    /// started. A no is kept for good, as is closing the question without an answer: nothing then ever connects for
+    /// this, and only the switch in the settings changes that.
+    /// </summary>
+    private static async Task AskAboutUpdates(MainViewModel viewModel)
+    {
+        var settings = viewModel.Settings;
+        if (settings.UpdateNotice != null) return;
+        settings.UpdateNotice = await viewModel.Dialogs.Confirm(Loc.Format("UpdateAsk", AppInfo.Name), Loc.Get("SetupYes"), Loc.Get("UpdateNo"));
+        settings.Save();
     }
 
     /// <summary>

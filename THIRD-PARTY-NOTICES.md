@@ -30,6 +30,12 @@ texts are at the links. None of them is a paid or restricted product.
 | --- | --- | --- |
 | [.NET](https://github.com/dotnet/runtime), with its Microsoft.Extensions and System.Security libraries | The runtime; it is inside the self-contained builds | MIT |
 
+## What the downloads are made with
+
+| Component | Used for | Licence |
+| --- | --- | --- |
+| [Inno Setup](https://jrsoftware.org/isinfo.php) | Building the Windows installer and its wizard | Inno Setup License |
+
 ## What the app may fetch, after asking
 
 These are not part of the app and are not shipped with it. They go from their owners to the user's computer, under

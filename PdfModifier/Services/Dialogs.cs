@@ -10,6 +10,8 @@ namespace PdfModifier.Services;
 /// <summary>File pickers and small modal prompts, owned by the main window.</summary>
 public sealed class Dialogs(Window owner)
 {
+    private readonly SemaphoreSlim _turn = new(1, 1);
+
     public static FilePickerFileType PdfFiles => new(Loc.Get("FilterPdf")) { Patterns = ["*.pdf"], MimeTypes = ["application/pdf"] };
 
     public static FilePickerFileType ImageFiles => new(Loc.Get("FilterImages"))
@@ -99,7 +101,17 @@ public sealed class Dialogs(Window owner)
         window.Content = panel;
         window.Opened += (_, _) => (input as Control ?? ok).Focus();
 
-        await window.ShowDialog(owner);
+        // One question at a time: two that come up together (at the first start, say) wait their turn.
+        await _turn.WaitAsync();
+        try
+        {
+            await window.ShowDialog(owner);
+        }
+        finally
+        {
+            _turn.Release();
+        }
+
         return result;
     }
 }

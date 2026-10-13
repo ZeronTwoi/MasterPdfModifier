@@ -26,15 +26,27 @@ public sealed class Settings
     public bool OcrCareful { get; set; }
 
     /// <summary>
+    /// Whether to look, when the app starts, if a newer version has been published. Empty until the user has been
+    /// asked, which happens once. With a no, nothing ever connects for this (see <see cref="UpdateCheck"/>).
+    /// </summary>
+    public bool? UpdateNotice { get; set; }
+
+    /// <summary>
     /// Linux: the question whether to put the app into the application menu has been asked. It is asked once; the
     /// settings have a button for a later yes.
     /// </summary>
     public bool MenuEntryOffered { get; set; }
 
-    /// <summary>Where the preferences are stored. Tests point this at a scratch folder.</summary>
-    public static string FilePath { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.Create),
-        "PdfModifier", "settings.json");
+    /// <summary>
+    /// Where the preferences are stored: in the per-user configuration folder, or in the file the PDFMODIFIER_SETTINGS
+    /// environment variable names, e.g. for a copy of the app that is carried around. Tests point this at a scratch
+    /// folder.
+    /// </summary>
+    public static string FilePath { get; set; } = Environment.GetEnvironmentVariable("PDFMODIFIER_SETTINGS") is { Length: > 0 } custom
+        ? custom
+        : Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.Create),
+            "PdfModifier", "settings.json");
 
     public static Settings Load()
     {

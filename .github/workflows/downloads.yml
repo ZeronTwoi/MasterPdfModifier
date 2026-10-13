@@ -1,7 +1,8 @@
 name: Downloads
 
-# Builds the downloads: one file for Windows, a package and an archive for Linux. Each is tried before it is
-# handed on, and all are attached to a release named after the version in PdfModifier/PdfModifier.csproj.
+# Builds the downloads: an installer and a one-file app for Windows, a package and an archive for Linux. Each is
+# tried before it is handed on, and all are attached to a release named after the version in
+# PdfModifier/PdfModifier.csproj.
 #
 # To publish a new version: raise <Version> in that file and push to main. Nothing else is needed.
 # "Run workflow" on the Actions page builds the downloads of the current version once more.
@@ -56,7 +57,7 @@ jobs:
           dotnet-version: 10.0.x
       - name: Test
         run: dotnet test PdfModifier.sln --blame-hang --blame-hang-timeout 300s
-      - name: Build the download
+      - name: Build the one-file app
         run: dotnet publish PdfModifier -c Release -r win-x64 -p:PublishSingleFile=true -o out
       - name: Try it on its own
         shell: pwsh
@@ -66,12 +67,49 @@ jobs:
           $run = Start-Process dist/MasterPdfModifier.exe -ArgumentList '--check' -Wait -PassThru -RedirectStandardOutput check-windows.txt
           Get-Content check-windows.txt
           if ($run.ExitCode -ne 0) { throw "The download does not work (exit code $($run.ExitCode))." }
+      - name: Build the installer
+        shell: pwsh
+        run: |
+          # The installed app is a folder of files, which starts faster than one file that has to unpack itself.
+          dotnet publish PdfModifier -c Release -r win-x64 --self-contained -p:DebugType=none -o app
+          if ($LASTEXITCODE -ne 0) { throw 'The app could not be built.' }
+          $version = (Select-String -Path PdfModifier/PdfModifier.csproj -Pattern '<Version>(.*)</Version>').Matches[0].Groups[1].Value
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $compiler)) { choco install innosetup --no-progress -y }
+          & $compiler "/DAppVersion=$version" "/DSource=$PWD\app" "/DOutput=$PWD\dist" packaging\windows\setup.iss
+          if ($LASTEXITCODE -ne 0) { throw 'The installer could not be built.' }
+      - name: Try the installer
+        shell: pwsh
+        run: |
+          # Installed without a word and with every box ticked, the way most people will have it.
+          $setup = Start-Process dist/MasterPdfModifier-Setup.exe -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS=desktopicon,openwith', "/LOG=$PWD\setup.log" -Wait -PassThru
+          if ($setup.ExitCode -ne 0) { Get-Content setup.log -Tail 40; throw "Setup failed (exit code $($setup.ExitCode))." }
+          $folder = "$env:LOCALAPPDATA\Programs\Master PDF Modifier"
+          $installed = "$folder\MasterPdfModifier.exe"
+          $run = Start-Process $installed -ArgumentList '--check' -Wait -PassThru -RedirectStandardOutput check-installed.txt
+          Get-Content check-installed.txt
+          if ($run.ExitCode -ne 0) { throw 'The installed app does not work.' }
+          $shortcuts = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Master PDF Modifier.lnk", "$([Environment]::GetFolderPath('Desktop'))\Master PDF Modifier.lnk"
+          foreach ($shortcut in $shortcuts) { if (-not (Test-Path $shortcut)) { throw "Missing: $shortcut" } }
+          if (-not (Get-ItemProperty 'HKCU:\Software\Classes\.pdf\OpenWithProgids' -Name 'MasterPdfModifier.pdf' -ErrorAction SilentlyContinue)) { throw 'The app is not offered for PDF files.' }
+          $entry = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' | Where-Object DisplayName -eq 'Master PDF Modifier'
+          if (-not $entry) { throw 'The app is not among the installed apps.' }
+          # And taken away again: nothing of it may stay behind.
+          Start-Process "$folder\unins000.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait
+          $deadline = (Get-Date).AddSeconds(60)
+          while ((Test-Path $folder) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 1 }
+          $left = @($folder) + $shortcuts | Where-Object { Test-Path $_ }
+          if (Get-ItemProperty 'HKCU:\Software\Classes\.pdf\OpenWithProgids' -Name 'MasterPdfModifier.pdf' -ErrorAction SilentlyContinue) { $left += 'the entry under Open with' }
+          if ($left) { throw "Removing the app left behind: $($left -join ', ')" }
+          "Version $($entry.DisplayVersion) installed and started; found in the Start menu, on the desktop, under Open with and among the installed apps; removed again without a trace." | Tee-Object -Append check-installed.txt
       - uses: actions/upload-artifact@v4
         with:
           name: windows
           path: |
+            dist/MasterPdfModifier-Setup.exe
             dist/MasterPdfModifier.exe
             check-windows.txt
+            check-installed.txt
           if-no-files-found: error
 
   linux:
@@ -134,7 +172,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' PdfModifier/PdfModifier.csproj | head -n 1)
-          set -- built/windows/dist/MasterPdfModifier.exe built/linux/dist/MasterPdfModifier.deb built/linux/dist/MasterPdfModifier-Linux.tar.gz
+          set -- built/windows/dist/MasterPdfModifier-Setup.exe built/windows/dist/MasterPdfModifier.exe built/linux/dist/MasterPdfModifier.deb built/linux/dist/MasterPdfModifier-Linux.tar.gz
           if gh release view "v$version" >/dev/null 2>&1; then
             gh release upload "v$version" "$@" --clobber
           else

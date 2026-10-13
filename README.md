@@ -45,8 +45,10 @@
 - **Your files stay on your computer.** No account, no upload, no tracking. The only things ever fetched from the
   internet are what text recognition needs (language data from the official Tesseract project and, where it is
   missing, the runtime or program it runs on), and only after the app has asked you.
-- **Nothing to set up.** One file to download and start. What the app needs beyond itself it fetches on its own,
-  after asking; nobody has to open a command line.
+- **Nothing to set up by hand.** A setup that asks what a setup should ask, or one file to start as it is. What the
+  app needs beyond itself it fetches on its own, after asking; nobody has to open a command line.
+- **New versions, if you want to hear of them.** The app asks once. With a yes it takes one look per start and
+  puts a warning sign on the settings button when there is a newer version; with a no it never connects for this.
 - **Eight interface languages**: English, Español, Deutsch, Русский, Français, 日本語, Português and Türkçe. Light
   or dark follows the setting of your desktop.
 
@@ -96,25 +98,37 @@ limits worth knowing.
 ## Get it
 
 <p align="center">
-  <a href="https://github.com/ZeronTwoi/MasterPdfModifier/releases/latest/download/MasterPdfModifier.exe"><b>Download for Windows</b></a>
+  <a href="https://github.com/ZeronTwoi/MasterPdfModifier/releases/latest/download/MasterPdfModifier-Setup.exe"><b>Download for Windows</b> (setup)</a>
   &nbsp;·&nbsp;
   <a href="https://github.com/ZeronTwoi/MasterPdfModifier/releases/latest/download/MasterPdfModifier.deb"><b>Download for Linux</b> (.deb)</a>
+</p>
+<p align="center">
+  <a href="https://github.com/ZeronTwoi/MasterPdfModifier/releases/latest/download/MasterPdfModifier.exe">Windows, without installing</a>
   &nbsp;·&nbsp;
   <a href="https://github.com/ZeronTwoi/MasterPdfModifier/releases/latest/download/MasterPdfModifier-Linux.tar.gz">Linux, other distributions</a>
   &nbsp;·&nbsp;
   <a href="https://github.com/ZeronTwoi/MasterPdfModifier/releases">all versions</a>
 </p>
 
-Download it, start it, use it. There is nothing to install first, and no command line anywhere.
+Download it, start it, use it. There is no command line anywhere.
 
 | | Windows | Linux |
 | --- | --- | --- |
-| **Start it** | Double-click `MasterPdfModifier.exe`. It is one file and can lie anywhere. Windows may say that it does not know the app, because it is new and not signed: choose *More info*, then *Run anyway*. | Debian, Ubuntu, Mint and their relatives: open `MasterPdfModifier.deb` and let the software centre install it; the app is in the application menu afterwards. Others: unpack the archive and start `MasterPdfModifier`; it offers to put itself into the application menu. |
+| **Start it** | Run `MasterPdfModifier-Setup.exe`. The setup speaks the app's eight languages and asks where to install, whether you want a shortcut on the desktop and whether to offer the app under "Open with" for PDF files. It installs for you alone, so no administrator is needed, and the app can be removed again like any other. Rather not install anything? `MasterPdfModifier.exe` is the whole app in one file: double-click it, wherever it lies. | Debian, Ubuntu, Mint and their relatives: open `MasterPdfModifier.deb` and let the software centre install it; the app is in the application menu afterwards. Others: unpack the archive and start `MasterPdfModifier`; it offers to put itself into the application menu. |
 | **What it fetches by itself** | Language data for text recognition. On a freshly set-up Windows also the Microsoft Visual C++ runtime, which the text recognition is built on, straight from Microsoft. | Language data for text recognition. The Tesseract program, where it is not installed yet, from the distribution (the package brings it along). |
 
+Windows may say that it does not know the setup or the app, because they are new and not signed: choose *More
+info*, then *Run anyway*.
+
 The app asks before it fetches anything and says what it is and where it comes from; after a yes it does the rest.
-"Not now" is a fine answer: everything but text recognition works without. The very first start takes a few seconds
-longer, because the one file unpacks what it is made of.
+"Not now" is a fine answer: everything but text recognition works without. The one-file app takes a few seconds
+longer at its very first start, because it unpacks what it is made of.
+
+**New versions.** The first time it is started the app asks whether it should tell you when a new version is out.
+With a yes it looks once each time it is started: a single request to GitHub that is answered with the number of the
+newest version, without anything about you or your documents in it. When there is a newer one, the settings button
+gets a warning sign and the settings say which version it is and lead to its download. With a no the app never
+connects for this, and it does not ask again; the settings have a box to change your mind.
 
 Every release is started by the build itself, on Windows and on Ubuntu, before it is handed out. Beyond that, Windows
 is where the app has been used most; Linux has been tried far less, and reports of what works and what does not are
@@ -144,18 +158,23 @@ dotnet test
 - `PdfModifier` – the desktop app (Avalonia). Its program file is called `MasterPdfModifier`.
 - `PdfModifier.Tests` – unit tests for the core, and tests that drive the real window with mouse and keyboard
   without needing a screen.
-- `packaging` – what the Linux package is made from, and the text that goes with a release.
+- `packaging` – what the Windows installer (Inno Setup) and the Linux package are made from, and the text that goes
+  with a release.
 - `docs` – the guide and the pictures on this page.
 
 **The downloads** are made by `.github/workflows/downloads.yml`. To publish a new version, raise `<Version>` in
-`PdfModifier/PdfModifier.csproj` and push to `main`: the tests run, the three downloads are built, each is started
-to see that it works, and all are attached to a release named after the version. The same one-file build can be made
-by hand, and asked whether it has all it needs:
+`PdfModifier/PdfModifier.csproj` and push to `main`: the tests run, the four downloads are built, each is tried
+(the installer by installing, starting and removing the app), and all are attached to a release named after the
+version. Apps that are told about new versions find it there. The one-file build can be made by hand, and asked
+whether it has all it needs:
 
 ```
 dotnet publish PdfModifier -c Release -r win-x64 -p:PublishSingleFile=true -o publish
 publish/MasterPdfModifier.exe --check
 ```
+
+The app keeps its settings in the user's configuration folder; `PDFMODIFIER_SETTINGS` names another file for them,
+for a copy that is carried around or for trying a first start again.
 
 The test suite generates its own documents. Four optional environment variables:
 
