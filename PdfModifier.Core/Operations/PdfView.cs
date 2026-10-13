@@ -69,6 +69,46 @@ public sealed class PdfView : IDisposable
         }
     }
 
+    /// <summary>
+    /// How many letters of the page's text stand each way, counted by the turn that would set them upright: [0]
+    /// those that are upright as the page is shown, [1] those that a quarter turn clockwise would set upright, and
+    /// so on. Letters that stand at a slant (a watermark across the page) are left out.
+    /// </summary>
+    internal int[] LetterDirections(int pageIndex)
+    {
+        lock (PdfDoc.Sync)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            using var page = _doc.LoadPage(pageIndex);
+            var counts = new int[4];
+            var textPage = Native.FPDFText_LoadPage(page.Handle);
+            if (textPage == 0) return counts;
+            try
+            {
+                var rotation = page.Rotation;
+                var letters = Native.FPDFText_CountChars(textPage);
+                for (var i = 0; i < letters; i++)
+                {
+                    var code = Native.FPDFText_GetUnicode(textPage, i);
+                    if (code > 0xFFFF || !char.IsLetterOrDigit((char)code)) continue;
+                    var angle = Native.FPDFText_GetCharAngle(textPage, i);
+                    if (angle < 0) continue;
+                    // How far the letter is turned clockwise as the page is shown; undoing that sets it upright.
+                    var clockwise = angle * 180 / Math.PI + rotation * 90;
+                    var quarter = Math.Round(clockwise / 90);
+                    if (Math.Abs(clockwise - quarter * 90) > 20) continue;
+                    counts[((4 - (int)quarter) % 4 + 4) % 4]++;
+                }
+
+                return counts;
+            }
+            finally
+            {
+                Native.FPDFText_ClosePage(textPage);
+            }
+        }
+    }
+
     public string GetText(int pageIndex)
     {
         lock (PdfDoc.Sync)

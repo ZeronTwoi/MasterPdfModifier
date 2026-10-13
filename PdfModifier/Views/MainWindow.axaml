@@ -333,7 +333,7 @@
                                     Content="{Binding SelectedTool.ApplyLabel}" Command="{Binding ApplyCommand}" IsEnabled="{Binding IsIdle}" />
                         </StackPanel>
                     </Border>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ScrollViewer x:Name="OptionsViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel Margin="16,16,16,16">
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="0,0,0,12">
                                 <Border Width="40" Height="40" CornerRadius="11" Background="{DynamicResource AccentSoft}" VerticalAlignment="Top">
@@ -359,13 +359,29 @@
                                     <DataTemplate DataType="vm:SliderField">
                                         <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="2">
                                             <TextBlock Classes="label" Text="{Binding Label}" />
-                                            <Grid ColumnDefinitions="*,96" ColumnSpacing="8">
+                                            <!-- As high as the number box: in a row, a slider then lines up with the buttons beside it. -->
+                                            <Grid ColumnDefinitions="*,84" ColumnSpacing="8" Height="32">
                                                 <Slider Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Value="{Binding Position}"
                                                         SmallChange="{Binding Increment}" LargeChange="{Binding Increment}" VerticalAlignment="Center" />
                                                 <NumericUpDown Grid.Column="1" Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
                                                                Increment="{Binding Increment}" FormatString="{Binding Format}" ShowButtonSpinner="False"
                                                                VerticalAlignment="Center" />
                                             </Grid>
+                                            <!-- The values wanted most of the time, one click each. -->
+                                            <ItemsControl ItemsSource="{Binding Stops}" IsVisible="{Binding HasStops}" Margin="0,2,0,0">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:SliderStop">
+                                                        <Button Classes="stop" Content="{Binding Label}"
+                                                                Command="{Binding $parent[ItemsControl].((vm:SliderField)DataContext).UseCommand}"
+                                                                CommandParameter="{Binding}" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
                                         </StackPanel>
                                     </DataTemplate>
                                     <DataTemplate DataType="vm:NumberField">
@@ -393,16 +409,23 @@
                                                      SelectionMode="Single,AlwaysSelected">
                                                 <ListBox.ItemsPanel>
                                                     <ItemsPanelTemplate>
-                                                        <UniformGrid Rows="1" />
+                                                        <UniformGrid Rows="{Binding Rows}" Columns="{Binding Columns}" />
                                                     </ItemsPanelTemplate>
                                                 </ListBox.ItemsPanel>
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate x:DataType="vm:Choice">
-                                                        <TextBlock Text="{Binding Label}" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                                                   ToolTip.Tip="{Binding Label}" />
+                                                        <!-- A drawing where the choice has one, with its words as the tip; the words otherwise. -->
+                                                        <Panel ToolTip.Tip="{Binding Label}" Background="Transparent">
+                                                            <controls:Icon Data="{Binding Icon}" IsVisible="{Binding HasIcon}" Width="20" Height="20"
+                                                                           HorizontalAlignment="Center" />
+                                                            <TextBlock Text="{Binding Label}" IsVisible="{Binding !HasIcon}" HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxLines="3"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                        </Panel>
                                                     </DataTemplate>
                                                 </ListBox.ItemTemplate>
                                             </ListBox>
+                                            <TextBlock Text="{Binding Caption}" IsVisible="{Binding HasCaption}" FontSize="12.5" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </DataTemplate>
                                     <DataTemplate DataType="vm:ChoiceField">
@@ -420,14 +443,26 @@
                                     <DataTemplate DataType="vm:PagesField">
                                         <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="5">
                                             <TextBlock Classes="label" Text="{Binding Label}" />
-                                            <ComboBox ItemsSource="{Binding Scopes}" SelectedItem="{Binding Scope}" HorizontalAlignment="Stretch">
-                                                <ComboBox.ItemTemplate>
+                                            <ListBox Classes="segments" ItemsSource="{Binding Scopes}" SelectedItem="{Binding Scope}"
+                                                     SelectionMode="Single,AlwaysSelected">
+                                                <ListBox.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <UniformGrid Rows="1" />
+                                                    </ItemsPanelTemplate>
+                                                </ListBox.ItemsPanel>
+                                                <ListBox.ItemTemplate>
                                                     <DataTemplate x:DataType="vm:Choice">
-                                                        <TextBlock Text="{Binding Label}" />
+                                                        <TextBlock Text="{Binding Label}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                   TextAlignment="Center" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
+                                                                   ToolTip.Tip="{Binding Label}" />
                                                     </DataTemplate>
-                                                </ComboBox.ItemTemplate>
-                                            </ComboBox>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
                                             <TextBox Text="{Binding Range}" IsVisible="{Binding IsRange}" Watermark="{DynamicResource T_PagesRangeHint}" />
+                                            <!-- Which pages that comes to, so the page list need not be looked at to know. -->
+                                            <TextBlock Classes="muted" Classes.invalid="{Binding IsInvalid}" Text="{Binding Summary}" FontSize="12"
+                                                       TextWrapping="Wrap"
+                                                       IsVisible="{Binding Summary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                                         </StackPanel>
                                     </DataTemplate>
                                     <DataTemplate DataType="vm:ColorField">
@@ -564,10 +599,48 @@
                                         </Panel>
                                     </DataTemplate>
                                     <DataTemplate DataType="vm:ActionField">
-                                        <Button IsVisible="{Binding IsVisible}" Command="{Binding Command}"
-                                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,10">
-                                            <TextBlock Text="{Binding Label}" TextWrapping="Wrap" TextAlignment="Center" />
+                                        <Button IsVisible="{Binding IsVisible}" Command="{Binding Command}" Classes.large="{Binding Large}"
+                                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,10"
+                                                ToolTip.Tip="{Binding Label}">
+                                            <Panel>
+                                                <StackPanel Orientation="Horizontal" Spacing="7" HorizontalAlignment="Center" IsVisible="{Binding Beside}">
+                                                    <controls:Icon Data="{Binding Icon}" IsVisible="{Binding HasIcon}" Width="16" Height="16"
+                                                                   VerticalAlignment="Center" />
+                                                    <TextBlock Text="{Binding Label}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" />
+                                                </StackPanel>
+                                                <!-- The few large buttons a tool is about: the drawing above, its words under it. -->
+                                                <StackPanel Spacing="5" IsVisible="{Binding Large}">
+                                                    <controls:Icon Data="{Binding Icon}" Width="24" Height="24" HorizontalAlignment="Center" />
+                                                    <TextBlock Text="{Binding Label}" TextWrapping="Wrap" TextAlignment="Center" FontSize="12" MaxLines="2"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </Panel>
                                         </Button>
+                                    </DataTemplate>
+                                    <!-- Where on the page something goes: the spots of a small page, to be clicked. -->
+                                    <DataTemplate DataType="vm:PlaceField">
+                                        <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="5">
+                                            <TextBlock Classes="label" Text="{Binding Label}" />
+                                            <Border Classes="sheet" HorizontalAlignment="Left">
+                                                <ItemsControl ItemsSource="{Binding Spots}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <UniformGrid Rows="3" Columns="3" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:PlaceSpot">
+                                                            <Button Classes="spot" Classes.chosen="{Binding IsChosen}" IsVisible="{Binding IsOffered}"
+                                                                    ToolTip.Tip="{Binding Label}"
+                                                                    Command="{Binding $parent[ItemsControl].((vm:PlaceField)DataContext).ChooseCommand}"
+                                                                    CommandParameter="{Binding}">
+                                                                <Ellipse Width="9" Height="9" />
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Border>
+                                        </StackPanel>
                                     </DataTemplate>
                                     <DataTemplate DataType="vm:CheckListField">
                                         <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="5">

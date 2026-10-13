@@ -148,6 +148,8 @@ public partial class MainWindow : Window
         vm.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(MainViewModel.PointScale)) KeepPlaceWhileZooming(vm);
+            // Another tool starts at its head, wherever the options of the one before were scrolled to.
+            if (e.PropertyName == nameof(MainViewModel.SelectedTool)) OptionsViewer.Offset = default;
         };
     }
 

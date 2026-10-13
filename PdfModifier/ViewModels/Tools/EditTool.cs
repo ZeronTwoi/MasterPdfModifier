@@ -31,7 +31,8 @@ public sealed class EditTool : Tool
 
     private readonly ModeField _mode, _align;
     private readonly InfoField _hint, _status;
-    private readonly ChoiceField _source, _font;
+    private readonly ModeField _source;
+    private readonly ChoiceField _font;
     private readonly ActionField _detect, _download, _applyLine, _deleteLine, _liftLine, _readArea;
     private readonly BoolField _careful;
     private readonly TextField _lineText, _text;
@@ -82,8 +83,8 @@ public sealed class EditTool : Tool
         _hint = Add(new InfoField());
 
         // Text the document already has, or that was found in the page image.
-        _source = Add(new ChoiceField("EditSource",
-            new Choice("auto", "EditSourceAuto"), new Choice("text", "EditSourceText"), new Choice("scan", "EditSourceScan")));
+        _source = Add(new ModeField("EditSource",
+            new Choice("auto", "EditSourceAuto"), new Choice("text", "EditSourceText"), new Choice("scan", "EditSourceScan")) { Columns = 1 });
         _careful = Add(new BoolField("OcrCareful", main.Settings.OcrCareful));
         _status = Add(new InfoField());
         _download = Add(OcrSetup.Button(main));
@@ -116,7 +117,7 @@ public sealed class EditTool : Tool
 
         _image = Add(new FileField("EditImageFile", true).WithPicker(main));
         _opacity = Add(new SliderField("Opacity", 100, 5, 100, 5));
-        _rotation = Add(new SliderField("Rotation", 0, -180, 180, 1));
+        _rotation = Add(new SliderField("Rotation", 0, -180, 180, 1).WithStops("°", 0, 90, 180, -90));
 
         _eraseWhat = Add(new CheckListField("EditEraseWhat"));
         _eraseColor = Add(new ColorField("EditEraseColor", "#FFFFFF", allowAutomatic: true).WithPicker(main));

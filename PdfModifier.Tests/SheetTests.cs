@@ -51,10 +51,10 @@ public class SheetTests
         return bitmap;
     }
 
-    private static SKBitmap TwoOnATable(int? first = 1, int? second = 2) => Sheet(2000, 1400, Table,
+    internal static SKBitmap TwoOnATable(int? first = 1, int? second = 2) => Sheet(2000, 1400, Table,
         (new SKRect(120, 130, 940, 1280), first), (new SKRect(1060, 110, 1880, 1260), second));
 
-    private static SKBitmap FourOnOneSheet(params int?[] numbers) => Sheet(2400, 3200, SKColors.White,
+    internal static SKBitmap FourOnOneSheet(params int?[] numbers) => Sheet(2400, 3200, SKColors.White,
         (new SKRect(0, 0, 1200, 1600), numbers[0]), (new SKRect(1200, 0, 2400, 1600), numbers[1]),
         (new SKRect(0, 1600, 1200, 3200), numbers[2]), (new SKRect(1200, 1600, 2400, 3200), numbers[3]));
 
@@ -101,7 +101,7 @@ public class SheetTests
     /// Two pages photographed on a wooden table: turned a little, with grain in the picture, optionally lit from one
     /// side, optionally lying so close that only a dark line shows between them.
     /// </summary>
-    private static unsafe SKBitmap Photograph(double tilt, bool unevenLight, bool touching)
+    internal static unsafe SKBitmap Photograph(double tilt, bool unevenLight, bool touching)
     {
         var wood = new SKColor(70, 52, 40);
         using var flat = Sheet(2000, 1400, wood, (new SKRect(120, 130, 940, 1280), 1),
@@ -371,6 +371,274 @@ public class SheetTests
         Assert.Equal(2, pages.Count);
         Close(new RectD(120 * 0.48, 130 * 0.48, 940 * 0.48, 1280 * 0.48), pages[0], 7);
         Close(new RectD(1060 * 0.48, 110 * 0.48, 1880 * 0.48, 1260 * 0.48), pages[1], 7);
+    }
+
+    // ---- where a page ends --------------------------------------------------------------------------------------
+
+    private static readonly SheetEdges Usual = SheetEdges.Automatic(0.5);
+
+    /// <summary>
+    /// The share of a frame's outline that lies on something dark: the lid of a scanner, a table, the depth of a fold.
+    /// A frame that sits on its page has next to none.
+    /// </summary>
+    private static double OffThePaper(SKBitmap picture, RectD frame, int inset = 4, int darkBelow = 130)
+    {
+        int left = (int)frame.Left + inset, top = (int)frame.Top + inset, right = (int)frame.Right - 1 - inset, bottom = (int)frame.Bottom - 1 - inset;
+        int dark = 0, all = 0;
+
+        void Look(int x, int y)
+        {
+            var c = picture.GetPixel(Math.Clamp(x, 0, picture.Width - 1), Math.Clamp(y, 0, picture.Height - 1));
+            all++;
+            if ((c.Red * 299 + c.Green * 587 + c.Blue * 114) / 1000 < darkBelow) dark++;
+        }
+
+        for (var x = left; x <= right; x += 2)
+        {
+            Look(x, top);
+            Look(x, bottom);
+        }
+
+        for (var y = top; y <= bottom; y += 2)
+        {
+            Look(left, y);
+            Look(right, y);
+        }
+
+        return (double)dark / all;
+    }
+
+    private static void Within(RectD outer, RectD inner, double slack = 2)
+    {
+        Assert.True(inner.Left >= outer.Left - slack && inner.Top >= outer.Top - slack && inner.Right <= outer.Right + slack &&
+                    inner.Bottom <= outer.Bottom + slack, $"{inner} is not inside {outer}");
+    }
+
+    [Fact]
+    public void ABookWithTheEdgesOfItsPagesShowingIsStillCutAtItsFold()
+    {
+        // The shadow in the fold runs on over the rim of pages at the foot of the book, and a book that lies a
+        // little askew smears the line of its fold over several columns: both are one fold all the same.
+        using var thick = SheetPictures.BookOnScanner(left: 90, top: 60, right: 130, bottom: 150, block: 14);
+        using var askew = SheetPictures.BookOnScanner(left: 60, top: 40, right: 200, bottom: 160, tilt: 0.8, noise: 6);
+
+        var pages = PdfSheets.Detect(thick);
+        Assert.Equal(2, pages.Count);
+        Assert.InRange(pages[0].Right, 1170, 1190);
+        Assert.Equal(2, PdfSheets.Detect(askew).Count);
+    }
+
+    [Fact]
+    public void TheDarkAroundABookAndTheShadowInItsFoldAreLeftOut()
+    {
+        // The book lies at (90, 60) to (2270, 1550) and shows 14 pixels of the pages underneath along its outer edges.
+        using var book = SheetPictures.BookOnScanner(left: 90, top: 60, right: 130, bottom: 150, block: 14, noise: 6);
+
+        var found = PdfSheets.Find(book, edges: Usual);
+
+        Assert.Equal(2, found.Pages.Count);
+        Assert.False(found.AnyEdgeInDoubt);
+        var (left, right) = (found.Pages[0], found.Pages[1]);
+        // Past the rim of pages on the outside, short of the shadow on the inside.
+        Assert.InRange(left.Left, 102, 112);
+        Assert.InRange(left.Right, 1130, 1166);
+        Assert.InRange(right.Left, 1194, 1230);
+        Assert.InRange(right.Right, 2248, 2258);
+        Assert.InRange(left.Top, 60, 70);
+        Assert.InRange(left.Bottom, 1526, 1538);
+        Assert.Equal(0, OffThePaper(book, left), 0.004);
+        Assert.Equal(0, OffThePaper(book, right), 0.004);
+        // Nothing of the pages themselves is given up: their print and their numbers are inside.
+        Within(left, new RectD(104 + 108, 60 + 110, 1180 - 108, 1536 - 50));
+        Within(right, new RectD(1180 + 108, 60 + 110, 2256 - 108, 1536 - 50));
+    }
+
+    [Theory]
+    [InlineData(0.8)]
+    [InlineData(-1.2)]
+    public void ABookLyingAskewOnTheGlassComesWithoutTheGlass(double tilt)
+    {
+        using var book = SheetPictures.BookOnScanner(left: 60, top: 40, right: 200, bottom: 160, tilt: tilt, noise: 6);
+
+        var asFound = PdfSheets.Find(book);
+        var found = PdfSheets.Find(book, edges: Usual);
+
+        Assert.Equal(2, found.Pages.Count);
+        Assert.False(found.AnyEdgeInDoubt);
+        // As found, the frames come with wedges of the lid; cut closer, they lie on paper all the way round.
+        Assert.True(OffThePaper(book, asFound.Pages[0]) > 0.02);
+        Assert.All(found.Pages, page => Assert.Equal(0, OffThePaper(book, page), 0.004));
+        for (var i = 0; i < 2; i++) Within(asFound.Pages[i], found.Pages[i]);
+        Assert.True(found.Pages[0].Right < found.Pages[1].Left - 20);
+    }
+
+    [Fact]
+    public void ADeepShadowInTheFoldGoesWithNeitherPage()
+    {
+        using var book = SheetPictures.BookOnScanner(fold: 90, noise: 6);
+
+        var found = PdfSheets.Find(book, edges: Usual);
+
+        Assert.Equal(2, found.Pages.Count);
+        Assert.False(found.AnyEdgeInDoubt);
+        Assert.True(found.Pages[1].Left - found.Pages[0].Right >= 80, $"{found.Pages[0].Right} to {found.Pages[1].Left}");
+        Assert.All(found.Pages, page => Assert.Equal(0, OffThePaper(book, page), 0.004));
+        // The print of both pages begins 111 pixels from the fold at x = 1115.
+        Assert.True(found.Pages[0].Right > 1115 - 100 && found.Pages[1].Left < 1115 + 100);
+    }
+
+    [Fact]
+    public void TheBlackAlongTheEdgesOfAPhotocopyIsCutOff()
+    {
+        // 70 pixels of black on the left and 90 at the foot, ragged where they end.
+        using var copy = SheetPictures.Photocopy();
+
+        var found = PdfSheets.Find(copy, edges: Usual);
+
+        var page = Assert.Single(found.Pages);
+        Assert.False(found.AnyEdgeInDoubt);
+        Assert.InRange(page.Left, 70, 78);
+        Assert.InRange(page.Bottom, 1754 - 98, 1754 - 90);
+        Assert.Equal((0.0, 1240.0), (page.Top, page.Right));
+    }
+
+    [Fact]
+    public void ASliverOfTheNextPageGoesWhenTheCutMayReachThatFar()
+    {
+        // 60 pixels of the page before, then the shadow of the fold, 22 pixels to either side of x = 60.
+        using var page = SheetPictures.PageWithSliver();
+
+        // Within reach of the usual setting there is no clean paper yet: the page stays whole, marked for a look.
+        var usual = PdfSheets.Find(page, edges: Usual);
+        Close(new RectD(0, 0, 1300, 1700), Assert.Single(usual.Pages), 2);
+        Assert.True(usual.EdgeInDoubt(0));
+
+        var closer = PdfSheets.Find(page, edges: SheetEdges.Automatic(0.7));
+        Assert.False(closer.AnyEdgeInDoubt);
+        Assert.InRange(closer.Pages[0].Left, 70, 92);
+        // The page's own print begins 124 pixels to the right of the fold.
+        Assert.Equal((0.0, 1300.0, 1700.0), (closer.Pages[0].Top, closer.Pages[0].Right, closer.Pages[0].Bottom));
+    }
+
+    public static IEnumerable<object[]> PagesWithNothingAroundThem() =>
+        new[] { "four", "paragraphs", "scan", "to the edge", "table" }.SelectMany(kind => new[] { 0.25, 0.5, 0.7 }.Select(c => new object[] { kind, c }));
+
+    [Theory]
+    [MemberData(nameof(PagesWithNothingAroundThem))]
+    public void WhatIsPageIsNotCutInto(string kind, double closeness)
+    {
+        using var scan = TestPdf.FakeScan();
+        using var picture = kind switch
+        {
+            "four" => FourOnOneSheet(1, 2, 3, 4),
+            "paragraphs" => Paragraphs(gap: 70),
+            "scan" => scan.Copy(),
+            // Cropped so that the first letter of every line touches the left edge, and the print nearly the others.
+            "to the edge" => SheetPictures.Part(scan, 140, 190, 1180, 1560),
+            _ => TwoOnATable()
+        };
+
+        var asFound = PdfSheets.Find(picture);
+        var found = PdfSheets.Find(picture, edges: SheetEdges.Automatic(closeness));
+
+        Assert.Equal(asFound.Pages.Count, found.Pages.Count);
+        Assert.False(found.AnyEdgeInDoubt);
+        // The sheets on the table lose the few pixels of table their frames came with, and nothing else.
+        for (var i = 0; i < found.Pages.Count; i++) Close(asFound.Pages[i], found.Pages[i], kind == "table" ? 6 : 1);
+    }
+
+    [Fact]
+    public void APictureThatRunsOffThePageIsNotTakenForWhatLiesAroundIt()
+    {
+        using var page = SheetPictures.PageWithPictureToTheEdge();
+
+        foreach (var closeness in new[] { 0.25, 0.5, 0.7, 1 })
+        {
+            var found = PdfSheets.Find(page, edges: SheetEdges.Automatic(closeness));
+            var area = Assert.Single(found.Pages);
+            // The photograph is dark from side to side as a band would be, but not of one shade: it stays, and the
+            // page is marked as one to look at.
+            Assert.Equal((0.0, 0.0, 1240.0), (area.Left, area.Top, area.Right));
+            Assert.True(found.EdgeInDoubt(0));
+        }
+    }
+
+    [Fact]
+    public void PagesInAPhotographLoseTheTableAroundThem()
+    {
+        using var slightly = Photograph(2, unevenLight: false, touching: false);
+        var found = PdfSheets.Find(slightly, edges: Usual);
+        Assert.Equal(2, found.Pages.Count);
+        Assert.False(found.AnyEdgeInDoubt);
+        Assert.All(found.Pages, page => Assert.Equal(0, OffThePaper(slightly, page), 0.004));
+
+        // Turned further, the corners of table reach deeper than the usual setting cuts: said so, not guessed at.
+        using var further = Photograph(4, unevenLight: true, touching: false);
+        var usual = PdfSheets.Find(further, edges: Usual);
+        Assert.True(usual.EdgeInDoubt(0) && usual.EdgeInDoubt(1));
+        var closer = PdfSheets.Find(further, edges: SheetEdges.Automatic(0.7));
+        Assert.False(closer.AnyEdgeInDoubt);
+        // (In the shade of this photograph the paper itself is nearly as dark as 130; the table is far darker. A page
+        // turned this far has its print almost at the upright frame, which may graze a letter.)
+        Assert.True(OffThePaper(further, usual.Pages[0], darkBelow: 100) > 0.02);
+        Assert.All(closer.Pages, page => Assert.Equal(0, OffThePaper(further, page, darkBelow: 100), 0.01));
+    }
+
+    [Fact]
+    public void TheCloserTheCutTheLessIsLeft()
+    {
+        using var book = SheetPictures.BookOnScanner(left: 90, top: 60, right: 130, bottom: 150, block: 14, noise: 6);
+        var steps = new[] { 0, 0.25, 0.5, 0.7, 0.85, 1 }.Select(c => PdfSheets.Find(book, edges: SheetEdges.Automatic(c)).Pages).ToList();
+
+        for (var i = 1; i < steps.Count; i++)
+        for (var page = 0; page < 2; page++)
+            Within(steps[i - 1][page], steps[i][page], 4);
+        // Up to 0.7 only what is not page goes; beyond that the margins go too, and at 1 the cut lies around the print:
+        // 24 lines from 110 to 1265 pixels down the page and its number below them.
+        static double Area(RectD r) => r.Width * r.Height;
+        Assert.True(Area(steps[3][0]) > Area(steps[0][0]) * 0.9);
+        Assert.True(Area(steps[5][0]) < Area(steps[3][0]) * 0.8);
+        Assert.InRange(steps[5][0].Left, 104 + 60, 104 + 108);
+        Assert.InRange(steps[5][0].Bottom, 1480, 1510);
+    }
+
+    [Fact]
+    public void StripsSetByHandComeOffAtTheEdgesOfTheSheetAndWherePagesMeet()
+    {
+        using var sheet = FourOnOneSheet(1, 2, 3, 4);
+        var asFound = PdfSheets.Find(sheet).Pages;
+
+        // 2 % of the sheet's 2400 pixels off its left, 4 % off its right; 3 and 5 % of its 3200 off top and bottom;
+        // and 1 % off every page where it meets another.
+        var pages = PdfSheets.Find(sheet, edges: SheetEdges.ByHand(0.02, 0.03, 0.04, 0.05, 0.01)).Pages;
+
+        Close(new RectD(asFound[0].Left + 48, asFound[0].Top + 96, asFound[0].Right - 24, asFound[0].Bottom - 32), pages[0], 3);
+        Close(new RectD(asFound[1].Left + 24, asFound[1].Top + 96, asFound[1].Right - 96, asFound[1].Bottom - 32), pages[1], 3);
+        Close(new RectD(asFound[2].Left + 48, asFound[2].Top + 32, asFound[2].Right - 24, asFound[2].Bottom - 160), pages[2], 3);
+        Close(new RectD(asFound[3].Left + 24, asFound[3].Top + 32, asFound[3].Right - 96, asFound[3].Bottom - 160), pages[3], 3);
+
+        // A page that has the sheet to itself meets no other: only the edges of the sheet count.
+        using var scan = TestPdf.FakeScan();
+        Close(new RectD(124, 0, 1240, 1754), Assert.Single(PdfSheets.Find(scan, edges: SheetEdges.ByHand(0.1, 0, 0, 0, 0.3)).Pages), 2);
+        // And a division asked for is seen to the same way.
+        var halves = PdfSheets.Divide(scan, 2, 1, SheetEdges.ByHand(0, 0, 0, 0, 0.05)).Pages;
+        Assert.Equal(2, halves.Count);
+        Assert.Equal(124, halves[1].Left - halves[0].Right, 3.0);
+    }
+
+    [Fact]
+    public void TheEdgesOfAPageOfADocumentAreFoundInItsOwnCoordinates()
+    {
+        using var book = SheetPictures.BookOnScanner(left: 90, top: 60, right: 130, bottom: 150, block: 14, noise: 6);
+        using var view = new PdfView(TestPdf.FromImage(book, 150));
+
+        var found = PdfSheets.Find(view, 0, PdfSheets.UsualSensitivity, Usual);
+
+        // 150 dpi: a pixel of the picture is 0.48 points of the page.
+        Assert.Equal(2, found.Pages.Count);
+        Assert.InRange(found.Pages[0].Left, 102 * 0.48, 113 * 0.48);
+        Assert.InRange(found.Pages[1].Right, 2247 * 0.48, 2258 * 0.48);
+        Assert.InRange(found.Pages[0].Bottom, 1526 * 0.48, 1538 * 0.48);
     }
 
     // ---- ordering -----------------------------------------------------------------------------------------------

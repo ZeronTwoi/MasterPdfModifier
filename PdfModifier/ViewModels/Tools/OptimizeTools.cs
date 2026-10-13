@@ -25,9 +25,16 @@ public sealed class CompressTool : Tool
     private readonly FolderField _folder;
     private readonly BoolField _subfolders;
     private readonly ChoiceField _output;
-    private readonly ChoiceField _preset;
-    private readonly NumberField _dpi, _quality;
+    private readonly ModeField _preset;
+    private readonly SliderField _dpi, _quality;
     private readonly BoolField _grayscale, _removeMetadata;
+    private bool _applying;
+
+    /// <summary>What the levels stand for: the resolution images are reduced to, and the quality they are stored at.</summary>
+    private static readonly Dictionary<string, (int Dpi, int Quality)> Levels = new()
+    {
+        ["light"] = (200, 85), ["balanced"] = (150, 70), ["strong"] = (100, 50)
+    };
     private readonly ActionField _measure;
     private readonly InfoField _report;
 
@@ -41,10 +48,11 @@ public sealed class CompressTool : Tool
         _subfolders = Add(new BoolField("CompressSubfolders"));
         _output = Add(new ChoiceField("CompressOutput",
             new Choice("sub", "CompressOutputSub"), new Choice("other", "CompressOutputOther"), new Choice("replace", "CompressOutputReplace")));
-        _preset = Add(new ChoiceField("CompressPreset",
-            new Choice("balanced", "CompressBalanced"), new Choice("strong", "CompressStrong"),
-            new Choice("light", "CompressLight"), new Choice("custom", "CompressCustom")));
-        _dpi = Add(new NumberField("CompressDpi", 150, 36, 600, 10));
+        _preset = Add(new ModeField("CompressPreset",
+            new Choice("light", "CompressLightShort"), new Choice("balanced", "CompressBalancedShort"),
+            new Choice("strong", "CompressStrongShort"), new Choice("custom", "CompressCustom")));
+        _preset.Select("balanced");
+        _dpi = Add(new SliderField("CompressDpi", 150, 40, 600, 10));
         _quality = Add(new SliderField("ImageQuality", 70, 10, 100, 1));
         _grayscale = Add(new BoolField("CompressGrayscale"));
         _removeMetadata = Add(new BoolField("CompressRemoveMetadata"));
@@ -52,7 +60,23 @@ public sealed class CompressTool : Tool
         // The preview of a folder: what every file would weigh, without writing anything.
         _measure = Add(new ActionField("CompressMeasure", () => main.RunBusy(context => RunFolder(context, write: false), false)));
         _report = Add(new InfoField());
-        _preset.PropertyChanged += (_, _) => Update();
+        // A level sets the two sliders; a slider moved by hand makes the settings one's own.
+        _preset.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(ChoiceField.Selected) || _applying || !Levels.TryGetValue(_preset.Key, out var level)) return;
+            _applying = true;
+            _dpi.Set(level.Dpi);
+            _quality.Set(level.Quality);
+            _applying = false;
+        };
+        foreach (var slider in new[] { _dpi, _quality })
+            slider.Edited += () =>
+            {
+                if (_applying || _preset.Key == "custom") return;
+                _applying = true;
+                _preset.Select("custom");
+                _applying = false;
+            };
         _target.PropertyChanged += (_, _) => Update();
         Update();
     }
@@ -65,7 +89,6 @@ public sealed class CompressTool : Tool
 
     private void Update()
     {
-        _dpi.IsVisible = _quality.IsVisible = _preset.Key == "custom";
         _folder.IsVisible = _subfolders.IsVisible = _output.IsVisible = _measure.IsVisible = WholeFolder;
         OnPropertyChanged(nameof(HasPreview));
         OnPropertyChanged(nameof(ApplyLabel));
@@ -74,14 +97,10 @@ public sealed class CompressTool : Tool
 
     public CompressOptions Options()
     {
-        var (dpi, quality) = _preset.Key switch
+        return new CompressOptions
         {
-            "strong" => (100, 50),
-            "light" => (200, 85),
-            "custom" => ((int)_dpi.Number, (int)_quality.Number),
-            _ => (150, 70)
+            MaxImageDpi = (int)_dpi.Number, JpegQuality = (int)_quality.Number, Grayscale = _grayscale.Value, RemoveMetadata = _removeMetadata.Value
         };
-        return new CompressOptions { MaxImageDpi = dpi, JpegQuality = quality, Grayscale = _grayscale.Value, RemoveMetadata = _removeMetadata.Value };
     }
 
     /// <summary>Shows what the images of the page look like after compression, which is what the setting is weighed against.</summary>
@@ -233,7 +252,7 @@ public sealed class CompressTool : Tool
 /// </summary>
 public sealed class EnhanceTool : Tool
 {
-    private readonly ChoiceField _recipe;
+    private readonly ModeField _recipe;
     private readonly PagesField _pages;
     private readonly BoolField _deskew, _evenLight, _whiten, _sharpen, _denoise, _upscale, _binarize, _grayscale, _darken;
     private readonly SliderField _strength, _deblur, _thicken;
@@ -253,9 +272,12 @@ public sealed class EnhanceTool : Tool
 
     public EnhanceTool() : base("Enhance", "GroupOptimize")
     {
-        _recipe = Add(new ChoiceField("EnhanceRecipe",
+        _recipe = Add(new ModeField("EnhanceRecipe",
             new Choice("standard", "EnhanceRecipeStandard"), new Choice("blurry", "EnhanceRecipeBlurry"),
-            new Choice("faint", "EnhanceRecipeFaint"), new Choice("photo", "EnhanceRecipePhoto"), new Choice("custom", "EnhanceRecipeCustom")));
+            new Choice("faint", "EnhanceRecipeFaint"), new Choice("photo", "EnhanceRecipePhoto"), new Choice("custom", "EnhanceRecipeCustom"))
+        {
+            Columns = 1
+        });
         _pages = Add(new PagesField());
         _deskew = Add(new BoolField("EnhanceDeskew", true));
         _evenLight = Add(new BoolField("EnhanceEvenLight"));
@@ -571,14 +593,14 @@ public sealed class OcrTool : Tool
 /// </summary>
 public sealed class AutomateTool : Tool
 {
-    private readonly ChoiceField _target;
+    private readonly ModeField _target;
     private readonly PagesField _pages;
     private readonly FileListField _files;
     private readonly BoolField _autoCrop, _enhance, _binarize, _watermarks, _flatten, _ocr, _compress, _metadata;
 
     public AutomateTool(MainViewModel main) : base("Automate", "GroupOptimize")
     {
-        _target = Add(new ChoiceField("AutoTarget", new Choice("current", "AutoCurrent"), new Choice("files", "AutoFiles")));
+        _target = Add(new ModeField("AutoTarget", new Choice("current", "AutoCurrent"), new Choice("files", "AutoFiles")));
         _pages = Add(new PagesField());
         _files = Add(new FileListField("AutoInputFiles").WithPicker(main));
         Add(new InfoField()).SetKey("AutoSteps");

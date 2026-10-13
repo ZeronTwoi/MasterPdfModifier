@@ -49,7 +49,8 @@ public class ToolPanelUiTests
 
     private static List<SheetArea> Frames(MainViewModel vm) => vm.Objects.Select(o => o.Model).OfType<SheetArea>().ToList();
 
-    private static string Note(Tool tool) => tool.Fields.OfType<InfoField>().First().Text;
+    /// <summary>What the tool says about the page on view: the first of its notes that is shown.</summary>
+    private static string Note(Tool tool) => tool.Fields.OfType<InfoField>().First(field => field.IsVisible).Text;
 
     private static byte[] ParagraphPage(float gap)
     {
@@ -173,6 +174,164 @@ public class ToolPanelUiTests
         Assert.Equal([3, 4], vm.SelectedPageIndexes);
         Assert.Equal(Loc.Format("StatusSheetsCutDoubt", 2, 4, 1), vm.StatusText);
         Assert.All(vm.Pages, page => Assert.Null(page.Badge));
+        window.Close();
+    }
+
+    // ---- the page cutter: what lies around the pages --------------------------------------------------------------------
+
+    private static byte[] BookOnScanner()
+    {
+        // The book lies at (90, 60) to (2270, 1550) of the picture; at 150 dpi a pixel is 0.48 points.
+        using var book = SheetPictures.BookOnScanner(left: 90, top: 60, right: 130, bottom: 150, block: 14, noise: 6);
+        return TestPdf.FromImage(book, 150);
+    }
+
+    [AvaloniaFact]
+    public async Task WhatLiesAroundThePagesIsLeftOutAsCloselyAsTheSliderSays()
+    {
+        var (window, vm) = Start();
+        vm.Session.Open(BookOnScanner(), null);
+        var tool = Tool<SheetTool>(vm);
+        await Settle(() => vm.Objects.Count == 2 && vm.PageBitmap != null);
+        FitPage(window, vm);
+        await Settle();
+
+        // Found by the app, at the usual closeness: the frames leave out the lid of the scanner, the rim of pages
+        // around the book and the shadow in its fold, and nothing about them is in doubt.
+        var edges = Field<ModeField>(tool, "SheetEdges");
+        var closeness = Field<SliderField>(tool, "SheetCloseness");
+        Assert.Equal(("auto", 50.0, true), (edges.Key, closeness.Number, closeness.IsVisible));
+        var found = Frames(vm);
+        Assert.All(found, frame => Assert.False(frame.Doubtful));
+        Assert.InRange(found[0].Bounds.Left, 102 * 0.48, 113 * 0.48);
+        Assert.InRange(found[0].Bounds.Right, 1130 * 0.48, 1166 * 0.48);
+        Assert.InRange(found[1].Bounds.Left, 1194 * 0.48, 1230 * 0.48);
+        Assert.InRange(found[1].Bounds.Bottom, 1526 * 0.48, 1538 * 0.48);
+        Assert.Equal(new PageBadge("2", false, Loc.Format("SheetBadgeCut", 2)), vm.Pages[0].Badge);
+        Capture(window, "44-sheet-edges");
+
+        // Closer still, the cut goes into the margins; at the far end it lies around the print.
+        closeness.Set(100);
+        await Settle(() => vm.Objects.Count == 2 && Frames(vm)[0].Bounds.Left > 150 * 0.48);
+        var tight = Frames(vm);
+        Assert.InRange(tight[0].Bounds.Left, 160 * 0.48, 212 * 0.48);
+        Assert.True(tight[0].Bounds.Width < found[0].Bounds.Width * 0.9);
+        Capture(window, "45-sheet-edges-tight");
+
+        // Left in, the frames are the halves of the book as they were found.
+        edges.Select("keep");
+        await Settle(() => vm.Objects.Count == 2 && Frames(vm)[0].Bounds.Left < 100 * 0.48);
+        var whole = Frames(vm);
+        Assert.False(closeness.IsVisible);
+        Assert.InRange(whole[0].Bounds.Left, 88 * 0.48, 94 * 0.48);
+        Assert.Equal(whole[0].Bounds.Right, whole[1].Bounds.Left, 3.0);
+
+        // By hand: strips of a set width come off at the edges of the sheet and to both sides of the fold.
+        edges.Select("hand");
+        var left = Field<SliderField>(tool, "SheetStripLeft");
+        Assert.True(left.IsVisible);
+        left.Set(10);
+        Field<SliderField>(tool, "SheetStripBetween").Set(2.5);
+        await Settle(() => vm.Objects.Count == 2 && Frames(vm)[0].Bounds.Left > whole[0].Bounds.Left + 100);
+        var byHand = Frames(vm);
+        // The sheet is 2400 pixels, 1152 points wide: 10 % of it are 115 points, 2.5 % are 29.
+        Assert.Equal(whole[0].Bounds.Left + 115.2, byHand[0].Bounds.Left, 2.0);
+        Assert.Equal(whole[0].Bounds.Right - 28.8, byHand[0].Bounds.Right, 2.0);
+        Assert.Equal(whole[1].Bounds.Left + 28.8, byHand[1].Bounds.Left, 2.0);
+        Assert.Equal(whole[1].Bounds.Right, byHand[1].Bounds.Right, 2.0);
+        Capture(window, "46-sheet-edges-by-hand");
+
+        // What is cut is what the frames show.
+        edges.Select("auto");
+        closeness.Set(50);
+        await Settle(() => vm.Objects.Count == 2 && Math.Abs(Frames(vm)[0].Bounds.Left - found[0].Bounds.Left) < 1);
+        await vm.ApplyCommand.ExecuteAsync(null);
+        await Settle(() => !vm.IsBusy && vm.Pages.Count == 2);
+        var pages = PdfPages.GetPageInfos(vm.Session.Bytes!);
+        Assert.Equal(found[0].Bounds.Width, pages[0].Width, 0.6);
+        Assert.Equal(found[1].Bounds.Height, pages[1].Height, 0.6);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task AnEdgeThatIsNotCertainTurnsItsFrameRedUntilItIsSettled()
+    {
+        using var sliver = SheetPictures.PageWithSliver();
+        var (window, vm) = Start();
+        vm.Session.Open(PdfPages.Merge([TestPdf.FromImage(sliver, 150), BookOnScanner()]), null);
+        var tool = Tool<SheetTool>(vm);
+        Field<PagesField>(tool, "Pages").Scope = Field<PagesField>(tool, "Pages").Scopes[0];
+        await Settle(() => vm.Objects.Count == 1 && vm.Pages[1].Badge != null && vm.PageBitmap != null);
+        FitPage(window, vm);
+        await Settle();
+
+        // A sliver of the page before and the shadow of the fold lie at the left of this page, further in than the
+        // usual closeness reaches: the page stays whole and says so in red, on the sheet and in the page list.
+        var frame = Assert.Single(Frames(vm));
+        Assert.True(frame.Doubtful);
+        Assert.Equal(0, frame.Bounds.Left, 1.0);
+        Assert.Equal(Loc.Get("SheetDoubtEdgeOne"), Note(tool));
+        Assert.Equal(new PageBadge("?", true, Loc.Get("SheetBadgeEdges")), vm.Pages[0].Badge);
+        Assert.Equal(new PageBadge("2", false, Loc.Format("SheetBadgeCut", 2)), vm.Pages[1].Badge);
+        Assert.True(Field<ActionField>(tool, "SheetConfirm").IsVisible);
+        Assert.Contains(Loc.Format("SummarySheetsDoubt", 1), vm.ApplySummary);
+        Capture(window, "47-sheet-edge-in-doubt");
+
+        // Allowed to go further in, the cut finds the clean paper behind the fold.
+        Field<SliderField>(tool, "SheetCloseness").Set(70);
+        await Settle(() => vm.Objects.Count == 1 && !Frames(vm)[0].Doubtful);
+        frame = Assert.Single(Frames(vm));
+        Assert.False(frame.Doubtful);
+        Assert.InRange(frame.Bounds.Left, 70 * 0.48, 92 * 0.48);
+        Assert.Equal(new PageBadge("1", false, Loc.Get("SheetBadgeCrop")), vm.Pages[0].Badge);
+        Assert.False(Field<ActionField>(tool, "SheetConfirm").IsVisible);
+        Assert.DoesNotContain(Loc.Format("SummarySheetsDoubt", 1), vm.ApplySummary);
+
+        // Or the doubt is settled by saying that the page is right as it is.
+        Field<SliderField>(tool, "SheetCloseness").Set(50);
+        await Settle(() => vm.Objects.Count == 1 && Frames(vm)[0].Doubtful);
+        Press(tool, "SheetConfirm");
+        Assert.False(Assert.Single(Frames(vm)).Doubtful);
+        Assert.Null(vm.Pages[0].Badge);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task FramesSetByHandStayAsTheyAreWhenTheSettingsChange()
+    {
+        var (window, vm) = Start();
+        vm.Session.Open(BookOnScanner(), null);
+        var tool = Tool<SheetTool>(vm);
+        await Settle(() => vm.Objects.Count == 2 && vm.PageBitmap != null);
+        FitPage(window, vm);
+        await Settle();
+        var note = AllFields(tool).OfType<InfoField>().Single(field => field.Text == Loc.Get("SheetByHand"));
+        Assert.False(note.IsVisible);
+
+        // Pulled in by hand, a frame is its owner's.
+        var before = Frames(vm)[0].Bounds;
+        var pulled = new RectD(before.Left + 30, before.Top + 20, before.Right, before.Bottom);
+        vm.ObjectTransformed(vm.Objects[0], pulled, 0, 1, false);
+        vm.ObjectTransformed(vm.Objects[0], pulled, 0, 1, true);
+        Assert.Equal(pulled, Frames(vm)[0].Bounds);
+        Assert.True(note.IsVisible);
+
+        // Other settings no longer move it.
+        Field<SliderField>(tool, "SheetCloseness").Set(100);
+        await Settle(() => vm.Objects.Count == 2);
+        await Settle();
+        Assert.Equal(pulled, Frames(vm)[0].Bounds);
+        Field<ModeField>(tool, "SheetEdges").Select("keep");
+        await Settle(() => vm.Objects.Count == 2);
+        await Settle();
+        Assert.Equal(pulled, Frames(vm)[0].Bounds);
+        Assert.True(note.IsVisible);
+
+        // Until its pages are found again, which goes by the settings as they are now.
+        Press(tool, "SheetAgain");
+        await Settle(() => vm.Objects.Count == 2 && !note.IsVisible);
+        Assert.False(note.IsVisible);
+        Assert.InRange(Frames(vm)[0].Bounds.Left, 88 * 0.48, 94 * 0.48);
         window.Close();
     }
 

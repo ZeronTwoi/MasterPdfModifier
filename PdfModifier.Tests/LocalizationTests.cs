@@ -89,7 +89,7 @@ public partial class LocalizationTests
     private static partial Regex ResourceKey();
 
     // Loc.Get("X"), Loc.Format("X", SetKey("X"), and field constructors, whose first argument is the label key.
-    [GeneratedRegex(@"(?:Loc\.Get|Loc\.Format|SetKey|new (?:Text|Number|Slider|Bool|Toggle|Choice|Mode|Pages|File|FileList|Action|CheckList|Color|PieceList|Folder)Field)\(""(\w+)""[,)]")]
+    [GeneratedRegex(@"(?:Loc\.Get|Loc\.Format|SetKey|new (?:Text|Number|Slider|Bool|Toggle|Choice|Mode|Pages|File|FileList|Action|CheckList|Color|PieceList|Folder|Place)Field)\(""(\w+)""[,)]")]
     private static partial Regex CodeKey();
 
     // new Choice("key", "LabelKey") — but not the literal form new Choice("key", "Text", true).

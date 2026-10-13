@@ -29,7 +29,57 @@ public enum SheetOrder
 /// What was found on a sheet: the pages on it (in visual coordinates and reading order), how much speaks for that
 /// result (0-1), and whether it is a close call that someone should look at before the sheet is cut.
 /// </summary>
-public sealed record SheetFinding(IReadOnlyList<RectD> Pages, double Certainty, bool Doubtful);
+public sealed record SheetFinding(IReadOnlyList<RectD> Pages, double Certainty, bool Doubtful)
+{
+    /// <summary>
+    /// For each page, whether where it ends is a close call: something that is not paper hangs on to its edge and
+    /// could not be cut away within what the setting allows. Empty when no page is in doubt.
+    /// </summary>
+    public IReadOnlyList<bool> EdgesInDoubt { get; init; } = [];
+
+    public bool EdgeInDoubt(int page) => page < EdgesInDoubt.Count && EdgesInDoubt[page];
+
+    public bool AnyEdgeInDoubt => EdgesInDoubt.Contains(true);
+}
+
+/// <summary>
+/// What is done about the edges of the pages found on a sheet. A page as it is found often comes with things that
+/// are not page: the dark of the scanner around a book, the shadow in its fold, a sliver of the page next to it.
+/// These are left in (<see cref="AsFound"/>), looked for and cut away (<see cref="Automatic"/>), or taken off as
+/// strips of a set width (<see cref="ByHand"/>).
+/// </summary>
+public sealed record SheetEdges
+{
+    /// <summary>The pages are taken as they are found.</summary>
+    public static SheetEdges AsFound { get; } = new();
+
+    /// <summary>
+    /// How close to the page the cut goes (0-1). At 0 nothing is cut away. Up to about 0.7 the cut moves in further
+    /// and further to leave out what is not paper; beyond that it goes on into the page's own margins, and at 1 it
+    /// lies right around what is printed.
+    /// </summary>
+    public double Closeness { get; init; }
+
+    /// <summary>Strips taken off at the edges of the sheet, as shares of its width (left, right) and height (top, bottom).</summary>
+    public double Left { get; init; }
+
+    public double Top { get; init; }
+    public double Right { get; init; }
+    public double Bottom { get; init; }
+
+    /// <summary>The strip taken off each page where it meets another page of the sheet, as a share of the sheet.</summary>
+    public double Between { get; init; }
+
+    public bool TakesStrips => Left > 0 || Top > 0 || Right > 0 || Bottom > 0 || Between > 0;
+
+    public static SheetEdges Automatic(double closeness) => new() { Closeness = Math.Clamp(closeness, 0, 1) };
+
+    public static SheetEdges ByHand(double left, double top, double right, double bottom, double between) => new()
+    {
+        Left = Math.Clamp(left, 0, 0.45), Top = Math.Clamp(top, 0, 0.45), Right = Math.Clamp(right, 0, 0.45),
+        Bottom = Math.Clamp(bottom, 0, 0.45), Between = Math.Clamp(between, 0, 0.45)
+    };
+}
 
 /// <summary>
 /// Sheets that show several pages at once: a scan of an open book, a photograph of pages lying next to each other, a
@@ -55,14 +105,15 @@ public static unsafe partial class PdfSheets
     /// meet. A sheet that shows just one page comes back as a single area: the whole page, or the sheet of paper on
     /// it when that lies on a background.
     /// </summary>
-    public static SheetFinding Find(PdfView view, int pageIndex, double sensitivity = UsualSensitivity) =>
-        OnPage(view, pageIndex, raster => Look(raster, Limit(sensitivity)));
+    /// <param name="edges">What is done about the edges of the pages found; null takes them as they are found.</param>
+    public static SheetFinding Find(PdfView view, int pageIndex, double sensitivity = UsualSensitivity, SheetEdges? edges = null) =>
+        OnPage(view, pageIndex, raster => Look(raster, Limit(sensitivity), edges ?? SheetEdges.AsFound));
 
-    /// <summary>As <see cref="Find(PdfView,int,double)"/> for a picture; the areas are in pixels.</summary>
-    public static SheetFinding Find(SKBitmap image, double sensitivity = UsualSensitivity) =>
-        OnImage(image, raster => Look(raster, Limit(sensitivity)));
+    /// <summary>As <see cref="Find(PdfView,int,double,SheetEdges)"/> for a picture; the areas are in pixels.</summary>
+    public static SheetFinding Find(SKBitmap image, double sensitivity = UsualSensitivity, SheetEdges? edges = null) =>
+        OnImage(image, raster => Look(raster, Limit(sensitivity), edges ?? SheetEdges.AsFound));
 
-    /// <summary>The pages <see cref="Find(PdfView,int,double)"/> finds at the usual sensitivity.</summary>
+    /// <summary>The pages <see cref="Find(PdfView,int,double,SheetEdges)"/> finds at the usual sensitivity.</summary>
     public static IReadOnlyList<RectD> Detect(PdfView view, int pageIndex) => Find(view, pageIndex).Pages;
 
     public static IReadOnlyList<RectD> Detect(SKBitmap image) => Find(image).Pages;
@@ -71,11 +122,16 @@ public static unsafe partial class PdfSheets
     /// Divides a page into <paramref name="columns"/> × <paramref name="rows"/> equal parts. A cut that falls close
     /// to an empty band or a fold moves into it, so the parts end where the pages do.
     /// </summary>
-    public static IReadOnlyList<RectD> Grid(PdfView view, int pageIndex, int columns, int rows) =>
-        OnPage(view, pageIndex, raster => Divide(raster, columns, rows)).Pages;
+    public static IReadOnlyList<RectD> Grid(PdfView view, int pageIndex, int columns, int rows) => Divide(view, pageIndex, columns, rows).Pages;
 
-    public static IReadOnlyList<RectD> Grid(SKBitmap image, int columns, int rows) =>
-        OnImage(image, raster => Divide(raster, columns, rows)).Pages;
+    public static IReadOnlyList<RectD> Grid(SKBitmap image, int columns, int rows) => Divide(image, columns, rows).Pages;
+
+    /// <summary>As <see cref="Grid(PdfView,int,int,int)"/>, with the edges of the parts seen to as <paramref name="edges"/> says.</summary>
+    public static SheetFinding Divide(PdfView view, int pageIndex, int columns, int rows, SheetEdges? edges = null) =>
+        OnPage(view, pageIndex, raster => Divide(raster, columns, rows, edges ?? SheetEdges.AsFound));
+
+    public static SheetFinding Divide(SKBitmap image, int columns, int rows, SheetEdges? edges = null) =>
+        OnImage(image, raster => Divide(raster, columns, rows, edges ?? SheetEdges.AsFound));
 
     /// <summary>How much has to speak for a division before it is made (see <see cref="Evidence"/>).</summary>
     private static double Limit(double sensitivity) => 0.85 - 0.7 * Math.Clamp(sensitivity, 0, 1);
@@ -83,17 +139,26 @@ public static unsafe partial class PdfSheets
     /// <summary>Within this distance of the limit a result is a close call.</summary>
     private const double CloseCall = 0.12;
 
-    private sealed record Found(List<Box> Pages, double Certainty, bool Doubtful);
+    /// <param name="Unsure">For each page, whether where it ends is a close call; null when none is.</param>
+    private sealed record Found(List<Box> Pages, double Certainty, bool Doubtful, List<bool>? Unsure = null);
 
     private static SheetFinding OnPage(PdfView view, int pageIndex, Func<Raster, Found> find)
     {
         var info = view.Pages[pageIndex];
         var scale = Math.Min(3, WorkSize / Math.Max(1, Math.Max(info.Width, info.Height)));
         using var bitmap = view.Render(pageIndex, scale);
-        double fx = info.Width / bitmap.Width, fy = info.Height / bitmap.Height;
-        var found = find(Raster.Read(bitmap));
-        return new SheetFinding(InOrder(found.Pages.Select(b => new RectD(b.Left * fx, b.Top * fy, b.Right * fx, b.Bottom * fy)).ToList()),
-            found.Certainty, found.Doubtful);
+        return Finding(find(Raster.Read(bitmap)), info.Width / bitmap.Width, info.Height / bitmap.Height);
+    }
+
+    /// <summary>What was found, in the units of whoever asked and in reading order.</summary>
+    private static SheetFinding Finding(Found found, double fx, double fy)
+    {
+        var areas = found.Pages.Select(b => new RectD(b.Left * fx, b.Top * fy, b.Right * fx, b.Bottom * fy)).ToList();
+        var order = Order(areas, SheetOrder.Rows);
+        return new SheetFinding(order.Select(i => areas[i]).ToList(), found.Certainty, found.Doubtful)
+        {
+            EdgesInDoubt = found.Unsure is { } unsure && unsure.Contains(true) ? order.Select(i => unsure[i]).ToList() : []
+        };
     }
 
     private static SheetFinding OnImage(SKBitmap image, Func<Raster, Found> find)
@@ -107,10 +172,7 @@ public static unsafe partial class PdfSheets
             if (factor < 1)
                 source = small = ImageFilters.Resize(source, Math.Max(1, (int)Math.Round(image.Width * factor)),
                     Math.Max(1, (int)Math.Round(image.Height * factor)));
-            double fx = (double)image.Width / source.Width, fy = (double)image.Height / source.Height;
-            var found = find(Raster.Read(source));
-            return new SheetFinding(InOrder(found.Pages.Select(b => new RectD(b.Left * fx, b.Top * fy, b.Right * fx, b.Bottom * fy)).ToList()),
-                found.Certainty, found.Doubtful);
+            return Finding(find(Raster.Read(source)), (double)image.Width / source.Width, (double)image.Height / source.Height);
         }
         finally
         {
@@ -118,8 +180,6 @@ public static unsafe partial class PdfSheets
             converted?.Dispose();
         }
     }
-
-    private static List<RectD> InOrder(List<RectD> areas) => Order(areas, SheetOrder.Rows).Select(i => areas[i]).ToList();
 
     private readonly record struct Box(int Left, int Top, int Right, int Bottom)
     {
@@ -214,9 +274,9 @@ public static unsafe partial class PdfSheets
         }
     }
 
-    private static Found Look(Raster raster, double limit)
+    private static Found Look(Raster raster, double limit, SheetEdges edges)
     {
-        var (regions, clear) = Regions(raster);
+        var (regions, clear, apart) = Regions(raster);
         var pages = new List<Box>();
         var certainty = clear;
         var doubtful = clear < 0.7;
@@ -230,26 +290,28 @@ public static unsafe partial class PdfSheets
             doubtful |= cut.Doubtful;
         }
 
-        return new Found(pages, certainty, doubtful);
+        return Edged(raster, new Found(pages, certainty, doubtful), apart, edges);
     }
 
-    private static Found Divide(Raster raster, int columns, int rows)
+    private static Found Divide(Raster raster, int columns, int rows, SheetEdges edges)
     {
         columns = Math.Clamp(columns, 1, 12);
         rows = Math.Clamp(rows, 1, 12);
-        var regions = Regions(raster).Sheets;
+        var (regions, _, apart) = Regions(raster);
         var region = regions.Count == 1 ? regions[0] : new Box(0, 0, raster.Width, raster.Height);
         var profile = new Profile(raster, region);
         // Divided the way someone asked for: there is nothing to doubt about that.
-        return new Found(Cells(region, Snapped(profile.Columns, region.Left, region.Width, columns, profile.Sides),
+        var found = new Found(Cells(region, Snapped(profile.Columns, region.Left, region.Width, columns, profile.Sides),
             Snapped(profile.Rows, region.Top, region.Height, rows, profile.Ends)), 1, false);
+        return Edged(raster, found, apart, edges);
     }
 
     /// <summary>
     /// The sheets of paper in the picture: areas that stand out from the background as a whole, and how clearly they
-    /// do (0-1). A picture that is one sheet from edge to edge (the usual scan) is a single region covering all of it.
+    /// do (0-1). A picture that is one sheet from edge to edge (the usual scan) is a single region covering all of it,
+    /// and <c>Apart</c> is false: nothing was told apart from a background then.
     /// </summary>
-    private static (List<Box> Sheets, double Clear) Regions(Raster raster)
+    private static (List<Box> Sheets, double Clear, bool Apart) Regions(Raster raster)
     {
         int w = raster.Width, h = raster.Height;
         var histogram = new long[256];
@@ -261,11 +323,11 @@ public static unsafe partial class PdfSheets
         foreach (var attempt in level > 14 ? new[] { level, 12 } : [level])
         {
             raster.Threshold(attempt);
-            if (Sheets(raster) is { Sheets.Count: > 0 } found) return found;
+            if (Sheets(raster) is { Sheets.Count: > 0 } found) return (found.Sheets, found.Clear, true);
         }
 
         raster.Threshold(level);
-        return ([new Box(0, 0, w, h)], 1);
+        return ([new Box(0, 0, w, h)], 1, false);
     }
 
     private static (List<Box> Sheets, double Clear)? Sheets(Raster raster)
@@ -462,8 +524,7 @@ public static unsafe partial class PdfSheets
         {
             // A few specks of dust do not make a band less empty.
             var tolerance = Math.Max(1, (int)(length * 0.004));
-            var gaps = new List<Gap>();
-            int leading = 0, trailing = 0;
+            var bands = new List<(int Start, int End, double LineSum, int LineCount)>();
             for (var start = 0; start < counts.Length;)
             {
                 if (!lines[start] && counts[start] > tolerance)
@@ -486,12 +547,33 @@ public static unsafe partial class PdfSheets
                     end++;
                 }
 
-                if (start == 0) leading = end;
-                else if (end == counts.Length) trailing = end - start;
-                else gaps.Add(new Gap(start + origin, end + origin, lineCount > 0 ? lineSum / lineCount + origin : null));
+                bands.Add((start, end, lineSum, lineCount));
                 start = end;
             }
 
+            // The shadow in a fold has shoulders, and a book that lies a little askew smears its line over several
+            // columns: next to a line, a few columns that are neither empty nor line belong to it and to the room
+            // around it.
+            var skirt = Math.Max(2, (int)Math.Round(counts.Length * 0.012));
+            for (var i = 0; i + 1 < bands.Count;)
+            {
+                var (first, second) = (bands[i], bands[i + 1]);
+                if (second.Start - first.End > skirt || first.LineCount + second.LineCount == 0)
+                {
+                    i++;
+                    continue;
+                }
+
+                bands[i] = (first.Start, second.End, first.LineSum + second.LineSum, first.LineCount + second.LineCount);
+                bands.RemoveAt(i + 1);
+            }
+
+            var gaps = new List<Gap>();
+            int leading = 0, trailing = 0;
+            foreach (var (start, end, lineSum, lineCount) in bands)
+                if (start == 0) leading = end;
+                else if (end == counts.Length) trailing = end - start;
+                else gaps.Add(new Gap(start + origin, end + origin, lineCount > 0 ? lineSum / lineCount + origin : null));
             return (gaps, (leading, trailing));
         }
 
@@ -718,6 +800,471 @@ public static unsafe partial class PdfSheets
             if (xs[column + 1] - xs[column] >= 2 && ys[row + 1] - ys[row] >= 2)
                 cells.Add(new Box(xs[column], ys[row], xs[column + 1], ys[row + 1]));
         return cells;
+    }
+
+    // ---- where a page ends --------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Up to this closeness the cut only moves in to leave out what is not page; beyond it, it goes on into the
+    /// page's own margins.
+    /// </summary>
+    private const double ToThePage = 0.7;
+
+    /// <summary>A line of an area counts as band (the dark around a book, the table) when this much of it is.</summary>
+    private const double BandShare = 0.85;
+
+    /// <summary>No more than this share of an area is given up at one side, whatever is found there.</summary>
+    private const double MostCutOff = 0.45;
+
+    private static double Mix(double from, double to, double share) => from + (to - from) * Math.Clamp(share, 0, 1);
+
+    /// <summary>Sees to the edges of the pages found the way <paramref name="edges"/> says.</summary>
+    private static Found Edged(Raster raster, Found found, bool apart, SheetEdges edges)
+    {
+        if (edges.Closeness <= 0 && !edges.TakesStrips) return found;
+        var pages = new List<Box>();
+        var unsure = new List<bool>();
+        foreach (var page in found.Pages)
+        {
+            var (area, open) = edges.Closeness > 0 ? Trimmed(raster, page, apart, edges.Closeness) : (page, false);
+            pages.Add(area);
+            unsure.Add(open);
+        }
+
+        if (edges.TakesStrips) pages = Stripped(pages, found.Pages, raster.Width, raster.Height, edges);
+        return found with { Pages = pages, Unsure = unsure };
+    }
+
+    /// <summary>
+    /// The shade of the paper across an area. Where the light fell unevenly it gets lighter or darker from one side
+    /// to the other, and what is paper has to be judged against the shade the paper has at that spot.
+    /// </summary>
+    private readonly record struct Paper(double Middle, double Across, double Down, double CenterX, double CenterY)
+    {
+        public double At(int x, int y) => Middle + Across * (x - CenterX) + Down * (y - CenterY);
+    }
+
+    private static Paper PaperOf(Raster raster, Box box)
+    {
+        const int cells = 6;
+        // The middle of the area is page, whatever lies around its edges.
+        double left = box.Left + box.Width * 0.15, top = box.Top + box.Height * 0.15;
+        double stepX = box.Width * 0.7 / cells, stepY = box.Height * 0.7 / cells;
+        var samples = new List<(double X, double Y, double Shade)>();
+        var levels = new int[256];
+        for (var row = 0; row < cells; row++)
+        for (var column = 0; column < cells; column++)
+        {
+            Array.Clear(levels);
+            int x0 = (int)(left + column * stepX), x1 = Math.Max(x0 + 1, (int)(left + (column + 1) * stepX));
+            int y0 = (int)(top + row * stepY), y1 = Math.Max(y0 + 1, (int)(top + (row + 1) * stepY));
+            for (var y = y0; y < y1; y++)
+            for (var x = x0; x < x1; x++)
+                levels[raster.Luma[y * raster.Width + x]]++;
+            // Paper is the lighter part of a cell: print covers less of it than it leaves free.
+            long count = (long)(x1 - x0) * (y1 - y0), below = 0;
+            var shade = 255;
+            for (var level = 0; level < 256; level++)
+            {
+                below += levels[level];
+                if (below * 10 < count * 7) continue;
+                shade = level;
+                break;
+            }
+
+            samples.Add(((x0 + x1) / 2.0 - box.Left, (y0 + y1) / 2.0 - box.Top, shade));
+        }
+
+        var shades = samples.Select(s => s.Shade).Order().ToList();
+        var usual = shades[shades.Count / 2];
+        double cx = box.Width / 2.0, cy = box.Height / 2.0;
+        // Cells that show something else (a picture, a dark heading) say nothing about the paper.
+        var paper = samples.Where(s => Math.Abs(s.Shade - usual) <= 36).ToList();
+        if (paper.Count < cells * cells / 3) return new Paper(usual, 0, 0, cx, cy);
+
+        // The plane through them that fits best.
+        double n = paper.Count, sx = 0, sy = 0, sz = 0, sxx = 0, syy = 0, sxy = 0, sxz = 0, syz = 0;
+        foreach (var (x, y, z) in paper)
+        {
+            double dx = x - cx, dy = y - cy;
+            sx += dx;
+            sy += dy;
+            sz += z;
+            sxx += dx * dx;
+            syy += dy * dy;
+            sxy += dx * dy;
+            sxz += dx * z;
+            syz += dy * z;
+        }
+
+        var det = n * (sxx * syy - sxy * sxy) - sx * (sx * syy - sxy * sy) + sy * (sx * sxy - sxx * sy);
+        if (Math.Abs(det) < 1e-6) return new Paper(usual, 0, 0, cx, cy);
+        var middle = (sz * (sxx * syy - sxy * sxy) - sx * (sxz * syy - sxy * syz) + sy * (sxz * sxy - sxx * syz)) / det;
+        var across = (n * (sxz * syy - sxy * syz) - sz * (sx * syy - sxy * sy) + sy * (sx * syz - sxz * sy)) / det;
+        var down = (n * (sxx * syz - sxz * sxy) - sx * (sx * syz - sxz * sy) + sz * (sx * sxy - sxx * sy)) / det;
+        // A slope steeper than light ever falls off is something else again.
+        across = Math.Clamp(across, -80.0 / box.Width, 80.0 / box.Width);
+        down = Math.Clamp(down, -80.0 / box.Height, 80.0 / box.Height);
+        return new Paper(middle, across, down, cx, cy);
+    }
+
+    /// <summary>What a pixel of an area is, as far as finding the page in it goes.</summary>
+    [Flags]
+    private enum Spot : byte
+    {
+        Paper = 0,
+
+        /// <summary>Not paper: print, a shadow, whatever lies around the page.</summary>
+        Marked = 1,
+
+        /// <summary>Connected to the edge of the area through what is not paper.</summary>
+        Held = 2,
+
+        /// <summary>Held, and far from being paper: the dark around a book rather than a shadow on it.</summary>
+        Far = 4,
+
+        /// <summary>Part of the background that the sheets were told apart from.</summary>
+        Outside = 8
+    }
+
+    /// <summary>
+    /// The page inside the area that was found for it: the area less what hangs on to its edges without being paper.
+    /// <para>
+    /// Only what is connected to the edge of the area is ever taken for not being page, so print on the page, which
+    /// stands free on its paper, is never cut into for looking dark. Bands that are far from paper along nearly all
+    /// of a side and of one shade (the dark of the scanner around a book, the table a sheet lies on) go however wide
+    /// they are. Softer things (the shadow in a fold, a sliver of the next page, the wedge a sheet lying askew leaves)
+    /// go only when clean paper follows them within a distance that grows with <paramref name="closeness"/>.
+    /// What could not be settled stays, and the result is reported as unsure. Past <see cref="ToThePage"/> the cut
+    /// goes on into the margins.
+    /// </para>
+    /// </summary>
+    private static (Box Area, bool Unsure) Trimmed(Raster raster, Box box, bool apart, double closeness)
+    {
+        int w = box.Width, h = box.Height;
+        if (w < 32 || h < 32) return (box, false);
+        var reach = Math.Min(1, closeness / ToThePage);
+        var paper = PaperOf(raster, box);
+        var tolerance = Mix(50, 24, reach);
+
+        var spots = new Spot[w * h];
+        var shades = new byte[w * h];
+        var far = new bool[w * h];
+        for (var y = 0; y < h; y++)
+        for (var x = 0; x < w; x++)
+        {
+            var index = (y + box.Top) * raster.Width + x + box.Left;
+            var shade = raster.Luma[index];
+            var off = Math.Abs(shade - paper.At(x, y));
+            shades[y * w + x] = shade;
+            // The table around sheets that were told apart from it is no paper, however light it is.
+            if (apart && raster.Outside[index]) spots[y * w + x] = Spot.Marked | Spot.Outside;
+            else if (off > tolerance) spots[y * w + x] = Spot.Marked;
+            far[y * w + x] = off > 64;
+        }
+
+        Hold(spots, w, h);
+        for (var i = 0; i < spots.Length; i++)
+            if ((spots[i] & Spot.Held) != 0 && (far[i] || (spots[i] & Spot.Outside) != 0))
+                spots[i] |= Spot.Far;
+
+        int left = 0, top = 0, right = w, bottom = h;
+        Side fromLeft = default, fromTop = default, fromRight = default, fromBottom = default;
+        // The sides depend on each other: a band along the top is part of every column until it has been cut off.
+        for (var round = 0; round < 3; round++)
+        {
+            var columns = Along(spots, shades, w, h, columns: true, top, bottom, reach);
+            fromLeft = Inward(columns, reach, backwards: false);
+            fromRight = Inward(columns, reach, backwards: true);
+            (left, right) = (fromLeft.Cut, w - fromRight.Cut);
+            var rows = Along(spots, shades, w, h, columns: false, left, right, reach);
+            fromTop = Inward(rows, reach, backwards: false);
+            fromBottom = Inward(rows, reach, backwards: true);
+            (top, bottom) = (fromTop.Cut, h - fromBottom.Cut);
+        }
+
+        // Next to nothing left: whatever this area shows, it is not a page with something around it.
+        if ((long)(right - left) * (bottom - top) < 0.3 * w * h) return (box, true);
+
+        var tighten = (closeness - ToThePage) / (1 - ToThePage);
+        if (tighten > 0 && Printed(spots, w, h, left, top, right, bottom) is { } print)
+        {
+            // Into the margins, towards what is printed. Only on a side that ends in clean paper: where something
+            // still hangs on to the edge, it may be part of the page and the print begins there.
+            var room = Math.Max(2, (int)Math.Round(Math.Min(w, h) * 0.012));
+            if (fromLeft.Clean) left = (int)Math.Round(Mix(left, Math.Max(left, print.Left - room), tighten));
+            if (fromTop.Clean) top = (int)Math.Round(Mix(top, Math.Max(top, print.Top - room), tighten));
+            if (fromRight.Clean) right = (int)Math.Round(Mix(right, Math.Min(right, print.Right + room), tighten));
+            if (fromBottom.Clean) bottom = (int)Math.Round(Mix(bottom, Math.Min(bottom, print.Bottom + room), tighten));
+        }
+
+        return (new Box(box.Left + left, box.Top + top, box.Left + right, box.Top + bottom),
+            fromLeft.Open || fromTop.Open || fromRight.Open || fromBottom.Open);
+    }
+
+    /// <summary>
+    /// What was decided about one side of an area: how far the cut moves in, whether it ends in clean paper there,
+    /// and whether something was left that could not be settled and is worth a look.
+    /// </summary>
+    private readonly record struct Side(int Cut, bool Clean, bool Open);
+
+    /// <summary>Marks what is connected to the edge of an area through pixels that are not paper.</summary>
+    private static void Hold(Spot[] spots, int w, int h)
+    {
+        var stack = new Stack<int>();
+
+        void Visit(int index)
+        {
+            if ((spots[index] & Spot.Marked) == 0 || (spots[index] & Spot.Held) != 0) return;
+            spots[index] |= Spot.Held;
+            stack.Push(index);
+        }
+
+        for (var x = 0; x < w; x++)
+        {
+            Visit(x);
+            Visit((h - 1) * w + x);
+        }
+
+        for (var y = 0; y < h; y++)
+        {
+            Visit(y * w);
+            Visit(y * w + w - 1);
+        }
+
+        while (stack.Count > 0)
+        {
+            var index = stack.Pop();
+            int x = index % w, y = index / w;
+            if (x > 0) Visit(index - 1);
+            if (x < w - 1) Visit(index + 1);
+            if (y > 0) Visit(index - w);
+            if (y < h - 1) Visit(index + w);
+        }
+    }
+
+    /// <summary>
+    /// An area counted along its columns or its rows. For each of those lines: how much of it hangs on to the edge
+    /// (<c>Held</c>), how much of that is far from being paper (<c>Far</c>), how much of its middle stretch is anything
+    /// but paper (<c>Marks</c>) and how much of that stands free on the page (<c>Print</c>), and what shade the far
+    /// part has.
+    /// </summary>
+    /// <param name="Across">How long the lines are.</param>
+    /// <param name="Within">How long their middle stretch is.</param>
+    private sealed record Counts(int[] Far, int[] Held, int[] Marks, int[] Print, long[] Shade, long[] Squares, int[] Seen, int Across, int Within);
+
+    /// <summary>
+    /// Counts along the columns (or rows) of an area, each taken from <paramref name="from"/> to <paramref name="to"/>.
+    /// The middle stretch leaves out as much at both ends as the sides there may still have to give up: what hangs on
+    /// to the top of an area must not keep its left side from being found clean.
+    /// </summary>
+    private static Counts Along(Spot[] spots, byte[] shades, int w, int h, bool columns, int from, int to, double reach)
+    {
+        var lines = columns ? w : h;
+        int[] far = new int[lines], held = new int[lines], marks = new int[lines], print = new int[lines], seen = new int[lines];
+        long[] shade = new long[lines], squares = new long[lines];
+        var ends = (int)Math.Ceiling((to - from) * Mix(0.008, 0.075, reach)) + 1;
+        int inner0 = from + ends, inner1 = to - ends;
+        int x0 = columns ? 0 : from, x1 = columns ? w : to, y0 = columns ? from : 0, y1 = columns ? to : h;
+        for (var y = y0; y < y1; y++)
+        for (var x = x0; x < x1; x++)
+        {
+            var spot = spots[y * w + x];
+            if (spot == Spot.Paper) continue;
+            var (line, along) = columns ? (x, y) : (y, x);
+            if (along >= inner0 && along < inner1)
+            {
+                marks[line]++;
+                if (spot == Spot.Marked) print[line]++;
+            }
+
+            if ((spot & Spot.Held) == 0) continue;
+            held[line]++;
+            if ((spot & Spot.Far) == 0) continue;
+            far[line]++;
+            // The table needs no looking at: it was told apart from the sheets as a whole.
+            if ((spot & Spot.Outside) != 0) continue;
+            int value = shades[y * w + x];
+            shade[line] += value;
+            squares[line] += value * value;
+            seen[line]++;
+        }
+
+        return new Counts(far, held, marks, print, shade, squares, seen, to - from, Math.Max(0, inner1 - inner0));
+    }
+
+    /// <summary>
+    /// How far the cut moves in from one side of an area, given what is found in each of the lines that run along
+    /// that side.
+    /// </summary>
+    /// <param name="backwards">Counts from the far end of the lines: the right side, or the bottom.</param>
+    private static Side Inward(Counts counts, double reach, bool backwards)
+    {
+        var length = counts.Far.Length;
+        var across = counts.Across;
+        if (across < 8 || counts.Within < 4) return default;
+
+        int At(int i) => backwards ? length - 1 - i : i;
+        int Far(int i) => counts.Far[At(i)];
+        int Held(int i) => counts.Held[At(i)];
+
+        var most = (int)(length * MostCutOff);
+        var band = across * BandShare;
+        // How far behind a strip of paper something that runs along the side is still looked for: the line of a
+        // fold that the cut between two pages missed by a little.
+        var ahead = Math.Max(1, (int)Math.Round(length * Mix(0.004, 0.05, reach)));
+        var blur = Math.Max(2, (int)Math.Round(length * 0.008));
+
+        var at = 0;
+        var cut = false;
+        var open = false;
+        while (true)
+        {
+            var next = -1;
+            for (var i = at; i <= at + ahead && i < most; i++)
+                if (Far(i) > band)
+                {
+                    next = i;
+                    break;
+                }
+
+            if (next < 0) break;
+            var end = next;
+            while (end < most && Far(end) > band) end++;
+            // More than can be given up, or of many shades: this is no band around a page but something on it,
+            // a photograph that runs off its edge.
+            if (end >= most || !OneShade(counts, At(next), At(end - 1)))
+            {
+                open = true;
+                break;
+            }
+
+            // A band ends sharply, with a few blurred lines. A sheet lying askew leaves a wedge that thins out slowly,
+            // and of that only what is table from end to end goes here.
+            var faded = end;
+            while (faded < most && faded - end < blur && Far(faded) > across * 0.15) faded++;
+            at = Far(faded) <= across * 0.15 ? faded : end;
+            cut = true;
+        }
+
+        // One line more, so the rim of the band does not show on the page.
+        if (cut) at = Math.Min(most, at + 1);
+
+        // What else hangs on to the edge: the soft rim of a shadow, a sliver of the next page, the rest of a wedge.
+        // It goes when clean paper follows within reach, and stays as it is otherwise.
+        var clean = Math.Max(1, (int)(counts.Within * 0.004));
+        var gap = Math.Max(3, (int)Math.Round(length * Mix(0.025, 0.010, reach)));
+        var far = Math.Max(1, (int)Math.Round(length * Mix(0.008, 0.075, reach)));
+
+        // Paper with nothing on it, not just nothing that hangs on to the edge: the letters after one that touches
+        // the edge are not the page's margin.
+        bool Clear(int from)
+        {
+            for (var i = from; i < from + gap; i++)
+                if (i >= length || counts.Marks[At(i)] > clean)
+                    return false;
+            return true;
+        }
+
+        var start = at;
+        var limit = Math.Min(start + far, most);
+        if (!open)
+        {
+            // Something soft that runs along the side a little way in (the shadow of a fold) is not stopped short of.
+            for (var i = Math.Min(start + Math.Min(ahead, far), limit); i >= start; i--)
+                if (Held(i) > across * 0.5)
+                {
+                    at = i + 1;
+                    break;
+                }
+
+            // Up to clean paper, but never across print: that is the page, however close to the edge it stands.
+            for (var i = at; i <= limit; i++)
+            {
+                if (Clear(i)) return new Side(i, true, false);
+                if (counts.Print[At(i)] > clean) break;
+            }
+        }
+
+        // Worth a look when something that runs along most of the side is left within reach.
+        for (var i = start; i <= limit && !open; i++) open = Held(i) > across * 0.5;
+        return new Side(start, false, open);
+    }
+
+    /// <summary>
+    /// True when the lines of a band are of one shade throughout, as the lid of a scanner, the black of a copy or
+    /// a table is, and a photograph is not.
+    /// </summary>
+    private static bool OneShade(Counts counts, int first, int last)
+    {
+        if (first > last) (first, last) = (last, first);
+        long seen = 0, sum = 0, squares = 0;
+        for (var i = first; i <= last; i++)
+        {
+            seen += counts.Seen[i];
+            sum += counts.Shade[i];
+            squares += counts.Squares[i];
+        }
+
+        if (seen < 16) return true;
+        var mean = (double)sum / seen;
+        return squares / (double)seen - mean * mean <= 30 * 30;
+    }
+
+    /// <summary>The box around what is printed inside part of an area: what is not paper and stands free of the edge.</summary>
+    private static Box? Printed(Spot[] spots, int w, int h, int left, int top, int right, int bottom)
+    {
+        var columns = new int[w];
+        var rows = new int[h];
+        for (var y = top; y < bottom; y++)
+        for (var x = left; x < right; x++)
+        {
+            if (spots[y * w + x] != Spot.Marked) continue;
+            columns[x]++;
+            rows[y]++;
+        }
+
+        // A speck or two in a line is dust, not print.
+        const int least = 2;
+        var first = Array.FindIndex(columns, count => count >= least);
+        var above = Array.FindIndex(rows, count => count >= least);
+        if (first < 0 || above < 0) return null;
+        return new Box(first, above, Array.FindLastIndex(columns, count => count >= least) + 1, Array.FindLastIndex(rows, count => count >= least) + 1);
+    }
+
+    /// <summary>
+    /// Takes the strips set by hand off the pages. A side of a page that faces another page of the sheet loses the
+    /// strip set for where pages meet; a side that faces the edge of the sheet loses the strip set for that edge.
+    /// </summary>
+    private static List<Box> Stripped(List<Box> pages, List<Box> found, int width, int height, SheetEdges edges)
+    {
+        // Pages lie beside (or above) each other when they share a good part of their height (or width).
+        static bool Share(int from, int to, int otherFrom, int otherTo) =>
+            Math.Min(to, otherTo) - Math.Max(from, otherFrom) >= 0.3 * Math.Min(to - from, otherTo - otherFrom);
+
+        var result = new List<Box>();
+        for (var i = 0; i < pages.Count; i++)
+        {
+            var own = found[i];
+            double middleX = (own.Left + own.Right) / 2.0, middleY = (own.Top + own.Bottom) / 2.0;
+            var others = found.Where((_, j) => j != i).ToList();
+            var besideLeft = others.Any(o => o.Right <= middleX && Share(own.Top, own.Bottom, o.Top, o.Bottom));
+            var besideRight = others.Any(o => o.Left >= middleX && Share(own.Top, own.Bottom, o.Top, o.Bottom));
+            var above = others.Any(o => o.Bottom <= middleY && Share(own.Left, own.Right, o.Left, o.Right));
+            var below = others.Any(o => o.Top >= middleY && Share(own.Left, own.Right, o.Left, o.Right));
+
+            var page = pages[i];
+            // However much is asked for, a good part of the page stays.
+            int mostAcross = (int)(page.Width * 0.4), mostDown = (int)(page.Height * 0.4);
+            int Strip(double share, int of, int most) => Math.Min(most, (int)Math.Round(share * of));
+            result.Add(new Box(
+                page.Left + Strip(besideLeft ? edges.Between : edges.Left, width, mostAcross),
+                page.Top + Strip(above ? edges.Between : edges.Top, height, mostDown),
+                page.Right - Strip(besideRight ? edges.Between : edges.Right, width, mostAcross),
+                page.Bottom - Strip(below ? edges.Between : edges.Bottom, height, mostDown)));
+        }
+
+        return result;
     }
 
     // ---- putting them in order ----------------------------------------------------------------------------------
