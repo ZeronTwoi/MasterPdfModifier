@@ -44,7 +44,7 @@ public static partial class Strings
 
         ["ErrNoDocument"] = "Öffnen Sie zuerst ein PDF.",
         ["ErrPassword"] = "Das Kennwort ist nicht korrekt.",
-        ["ErrOcrLanguages"] = "Die Daten für die Texterkennung fehlen für: {0}. Öffnen Sie die Einstellungen und laden Sie sie herunter.",
+        ["ErrOcrLanguages"] = "Die Daten für die Texterkennung fehlen für: {0}.",
         ["ErrOcrUnavailable"] = "Die Texterkennung ist auf diesem Computer nicht verfügbar.",
         ["ErrPageRange"] = "Die Seitenauswahl ist ungültig. Verwenden Sie Seitenzahlen und Bereiche wie 1-3, 5, 8-.",
         ["ErrPdf"] = "Das PDF konnte nicht verarbeitet werden: {0}",

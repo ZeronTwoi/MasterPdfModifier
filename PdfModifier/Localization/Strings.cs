@@ -63,7 +63,7 @@ public static partial class Strings
         // Errors
         ["ErrNoDocument"] = "Open a PDF first.",
         ["ErrPassword"] = "The password is not correct.",
-        ["ErrOcrLanguages"] = "Text recognition data is missing for: {0}. Open Settings and download it.",
+        ["ErrOcrLanguages"] = "Text recognition data is missing for: {0}.",
         ["ErrOcrUnavailable"] = "Text recognition is not available on this computer.",
         ["ErrPageRange"] = "The page selection is not valid. Use page numbers and ranges such as 1-3, 5, 8-.",
         ["ErrPdf"] = "The PDF could not be processed: {0}",

@@ -44,7 +44,7 @@ public static partial class Strings
 
         ["ErrNoDocument"] = "先に PDF を開いてください。",
         ["ErrPassword"] = "パスワードが正しくありません。",
-        ["ErrOcrLanguages"] = "次の言語の文字認識データがありません: {0}。「設定」を開いてダウンロードしてください。",
+        ["ErrOcrLanguages"] = "次の言語の文字認識データがありません: {0}。",
         ["ErrOcrUnavailable"] = "このコンピューターでは文字認識を利用できません。",
         ["ErrPageRange"] = "ページの指定が正しくありません。1-3, 5, 8- のようにページ番号と範囲で指定してください。",
         ["ErrPdf"] = "PDF を処理できませんでした: {0}",

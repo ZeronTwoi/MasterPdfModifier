@@ -44,7 +44,7 @@ public static partial class Strings
 
         ["ErrNoDocument"] = "Ouvrez d'abord un PDF.",
         ["ErrPassword"] = "Le mot de passe est incorrect.",
-        ["ErrOcrLanguages"] = "Les données de reconnaissance de texte manquent pour : {0}. Ouvrez les Paramètres et téléchargez-les.",
+        ["ErrOcrLanguages"] = "Les données de reconnaissance de texte manquent pour : {0}.",
         ["ErrOcrUnavailable"] = "La reconnaissance de texte n'est pas disponible sur cet ordinateur.",
         ["ErrPageRange"] = "La sélection de pages n'est pas valide. Utilisez des numéros et des plages comme 1-3, 5, 8-.",
         ["ErrPdf"] = "Le PDF n'a pas pu être traité : {0}",

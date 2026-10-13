@@ -44,7 +44,7 @@ public static partial class Strings
 
         ["ErrNoDocument"] = "Önce bir PDF açın.",
         ["ErrPassword"] = "Parola doğru değil.",
-        ["ErrOcrLanguages"] = "Şu diller için metin tanıma verileri eksik: {0}. Ayarlar'ı açıp indirin.",
+        ["ErrOcrLanguages"] = "Şu diller için metin tanıma verileri eksik: {0}.",
         ["ErrOcrUnavailable"] = "Metin tanıma bu bilgisayarda kullanılamıyor.",
         ["ErrPageRange"] = "Sayfa seçimi geçerli değil. 1-3, 5, 8- gibi sayfa numaraları ve aralıklar kullanın.",
         ["ErrPdf"] = "PDF işlenemedi: {0}",
