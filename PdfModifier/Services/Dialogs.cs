@@ -54,6 +54,9 @@ public sealed class Dialogs(Window owner)
 
     public async Task<bool> Confirm(string text) => await Show(text, null, true) != null;
 
+    /// <summary>A question whose two answers are named for what they do, rather than OK and Cancel.</summary>
+    public async Task<bool> Confirm(string text, string yes, string no) => await Show(text, null, true, yes, no) != null;
+
     /// <summary>Asks for a password; null when cancelled.</summary>
     public Task<string?> AskPassword(string prompt)
     {
@@ -61,7 +64,7 @@ public sealed class Dialogs(Window owner)
         return Show(prompt, box, true);
     }
 
-    private async Task<string?> Show(string text, TextBox? input, bool cancellable)
+    private async Task<string?> Show(string text, TextBox? input, bool cancellable, string? yes = null, string? no = null)
     {
         var window = new Window
         {
@@ -74,7 +77,7 @@ public sealed class Dialogs(Window owner)
         };
 
         string? result = null;
-        var ok = new Button { Content = Loc.Get("Ok"), IsDefault = true, MinWidth = 90, HorizontalContentAlignment = HorizontalAlignment.Center };
+        var ok = new Button { Content = yes ?? Loc.Get("Ok"), IsDefault = true, MinWidth = 90, HorizontalContentAlignment = HorizontalAlignment.Center };
         ok.Click += (_, _) =>
         {
             result = input?.Text ?? "";
@@ -84,7 +87,7 @@ public sealed class Dialogs(Window owner)
         buttons.Children.Add(ok);
         if (cancellable)
         {
-            var cancel = new Button { Content = Loc.Get("Cancel"), IsCancel = true, MinWidth = 90, HorizontalContentAlignment = HorizontalAlignment.Center };
+            var cancel = new Button { Content = no ?? Loc.Get("Cancel"), IsCancel = true, MinWidth = 90, HorizontalContentAlignment = HorizontalAlignment.Center };
             cancel.Click += (_, _) => window.Close();
             buttons.Children.Add(cancel);
         }

@@ -4,13 +4,14 @@ namespace PdfModifier;
 
 public static class AppInfo
 {
-    public const string Name = "PDF Modifier";
+    public const string Name = "Master PDF Modifier";
 
     /// <summary>
-    /// What the windows call themselves towards a Linux desktop. The launcher entry (packaging/linux) names the same
-    /// under StartupWMClass; that is how the desktop knows a window of this program and gives it its icon.
+    /// What the windows call themselves towards a Linux desktop. The menu entry (Services/DesktopEntry and
+    /// packaging/linux) names the same under StartupWMClass; that is how the desktop knows a window of this program
+    /// and gives it its icon.
     /// </summary>
-    public const string WindowClass = "PdfModifier";
+    public const string WindowClass = "MasterPdfModifier";
 
     /// <summary>Where the "Support the project" button leads. The button is hidden while this is empty.</summary>
     public const string DonationUrl = "";

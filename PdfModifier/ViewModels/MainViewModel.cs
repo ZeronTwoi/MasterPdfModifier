@@ -113,6 +113,7 @@ public partial class MainViewModel : LocalizedObject
     public MainViewModel(Settings settings)
     {
         Settings = settings;
+        Supplies = new OcrSupplies(this);
         Tools = ToolCatalog.Create(this);
         string? group = null;
         foreach (var tool in Tools)
@@ -134,6 +135,9 @@ public partial class MainViewModel : LocalizedObject
 
     /// <summary>Set by the window once it exists.</summary>
     public Dialogs Dialogs { get; set; } = null!;
+
+    /// <summary>Fetches what text recognition lacks on this computer, after asking.</summary>
+    public OcrSupplies Supplies { get; }
 
     /// <summary>Device pixels per layout unit of the screen the window is on; pages are rendered that much sharper.</summary>
     public double RenderScaling { get; set; } = 1;

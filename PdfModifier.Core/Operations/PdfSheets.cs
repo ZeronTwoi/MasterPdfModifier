@@ -816,7 +816,7 @@ public static unsafe partial class PdfSheets
         var codes = languages.Where(Languages.IsSupported).Select(c => c.ToLowerInvariant()).Distinct().ToList();
         if (codes.Count == 0) codes.Add(Languages.Default);
         var backend = OcrBackends.Get();
-        if (backend.NeedsLocalData && TessData.Missing(codes) is { Count: > 0 } missing) throw new OcrLanguageMissingException(missing);
+        if (OcrBackends.Missing(backend, codes) is { Count: > 0 } missing) throw new OcrLanguageMissingException(missing);
         var list = string.Join('+', codes.Select(c => Languages.Get(c).TesseractCode));
 
         SKBitmap? converted = null;

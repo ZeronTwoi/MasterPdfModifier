@@ -111,6 +111,7 @@ public sealed class SettingsTool : Tool
     private readonly CheckListField _ocrLanguages;
     private readonly BoolField _autoDetect;
     private readonly InfoField _engine;
+    private readonly ActionField _setup, _menuAdd, _menuRemove;
     private readonly MainViewModel _main;
 
     public SettingsTool(MainViewModel main) : base("Settings", "GroupApp")
@@ -155,6 +156,9 @@ public sealed class SettingsTool : Tool
 
         Add(new ActionField("SettingsDownload", () => main.RunBusy(Download, false)));
         _engine = Add(new InfoField());
+        _setup = Add(OcrSetup.Button(main));
+        _menuAdd = Add(new ActionField("MenuAdd", () => ChangeMenuEntry(true)));
+        _menuRemove = Add(new ActionField("MenuRemove", () => ChangeMenuEntry(false)));
         Add(new InfoField()).SetText($"{AppInfo.Name} {AppInfo.Version}");
         Add(new InfoField()).SetKey("AboutText");
         Add(new ActionField("AboutSupport", () =>
@@ -176,39 +180,47 @@ public sealed class SettingsTool : Tool
     private void RefreshLanguageList()
     {
         var (available, detail) = PdfOcr.EngineStatus();
-        // Only the built-in engine reads the downloaded files; an external Tesseract manages its own.
-        var usesDownloads = available && detail.Contains("built in");
         foreach (var item in _ocrLanguages.Items)
         {
+            // Without an engine there is nothing to say about a language yet.
             var name = Languages.Get(item.Key).NativeName;
-            item.Label = !usesDownloads ? name
-                : TessData.IsInstalled(item.Key) ? Loc.Format("SettingsLanguageReady", name)
+            item.Label = !available ? name
+                : PdfOcr.MissingLanguages([item.Key]).Count == 0 ? Loc.Format("SettingsLanguageReady", name)
                 : Loc.Format("SettingsLanguageMissing", name);
         }
 
-        _engine.SetText(available ? Loc.Format("SettingsEngineOk", detail) : Loc.Get("ErrOcrUnavailable") + "\n" + detail);
+        // What the engine itself lacks is said in plain words, with a button that fetches it.
+        var lack = available ? null : _main.Supplies.Lack();
+        _engine.SetText(available ? Loc.Format("SettingsEngineOk", detail) : lack?.Text ?? Loc.Get("ErrOcrUnavailable") + "\n" + detail);
+        _setup.IsVisible = lack is { CanFetch: true };
+        _menuAdd.IsVisible = DesktopEntry.IsSupported && !DesktopEntry.Exists();
+        _menuRemove.IsVisible = DesktopEntry.IsSupported && DesktopEntry.IsOwn;
     }
 
     private async Task Download(ToolContext context)
     {
-        var missing = TessData.Missing(_main.Settings.OcrLanguages);
-        if (missing.Count == 0)
+        // The engine comes first: without it no language can be read, downloaded or not.
+        if (_main.Supplies.Lack() is { Key: "runtime" or "program" }) await _main.Supplies.Ensure(context, confirmed: true);
+        if (!await _main.Supplies.DownloadLanguages(context)) context.Status(Loc.Get("SettingsNothingToDownload"));
+        context.Main.RefreshWhenIdle();
+    }
+
+    /// <summary>Linux: puts the app into the application menu, or takes out the entry it put there.</summary>
+    private Task ChangeMenuEntry(bool add)
+    {
+        try
         {
-            context.Status(Loc.Get("SettingsNothingToDownload"));
-            return;
+            if (!add) DesktopEntry.Remove();
+            else if (DesktopEntry.Program is { } program) DesktopEntry.Add(program);
+            _main.StatusText = Loc.Format(add ? "MenuAdded" : "MenuRemoved", AppInfo.Name);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            _main.StatusText = MainViewModel.Describe(e);
         }
 
-        for (var i = 0; i < missing.Count; i++)
-        {
-            var index = i;
-            context.Status(Loc.Format("SettingsDownloading", Languages.Get(missing[i]).NativeName));
-            var progress = new Progress<double>(p => context.Progress.Report((index + p) / missing.Count));
-            await TessData.DownloadAsync(missing[i], progress, context.Cancel);
-            RefreshLanguageList();
-        }
-
-        context.Status(Loc.Get("SettingsDownloaded"));
-        await context.Main.RefreshTool();
+        RefreshLanguageList();
+        return Task.CompletedTask;
     }
 }
 

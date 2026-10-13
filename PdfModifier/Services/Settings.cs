@@ -25,6 +25,12 @@ public sealed class Settings
     /// <summary>Read scans with every means there is: slower, for pages that are blurred, coarse or pale.</summary>
     public bool OcrCareful { get; set; }
 
+    /// <summary>
+    /// Linux: the question whether to put the app into the application menu has been asked. It is asked once; the
+    /// settings have a button for a later yes.
+    /// </summary>
+    public bool MenuEntryOffered { get; set; }
+
     /// <summary>Where the preferences are stored. Tests point this at a scratch folder.</summary>
     public static string FilePath { get; set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.Create),

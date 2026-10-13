@@ -1,13 +1,13 @@
 [Desktop Entry]
 Type=Application
 Version=1.0
-Name=PDF Modifier
+Name=Master PDF Modifier
 GenericName=PDF Editor
 Comment=Edit, organise, clean up and compress PDF files
-Exec=PdfModifier %F
-Icon=pdfmodifier
+Exec=masterpdfmodifier %F
+Icon=masterpdfmodifier
 Terminal=false
 Categories=Office;
 MimeType=application/pdf;
 Keywords=pdf;scan;ocr;merge;split;compress;watermark;
-StartupWMClass=PdfModifier
+StartupWMClass=MasterPdfModifier

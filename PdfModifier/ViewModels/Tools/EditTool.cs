@@ -86,7 +86,7 @@ public sealed class EditTool : Tool
             new Choice("auto", "EditSourceAuto"), new Choice("text", "EditSourceText"), new Choice("scan", "EditSourceScan")));
         _careful = Add(new BoolField("OcrCareful", main.Settings.OcrCareful));
         _status = Add(new InfoField());
-        _download = Add(new ActionField("EditDownloadData", () => main.RunBusy(DownloadLanguages, false)));
+        _download = Add(OcrSetup.Button(main));
         _detect = Add(new ActionField("EditDetectAgain", () =>
         {
             _recognised.Remove(main.CurrentPageIndex);
@@ -387,11 +387,13 @@ public sealed class EditTool : Tool
             return;
         }
 
-        if (OcrSetup.Problem(main.Settings) is { } problem)
+        if (main.Supplies.Lack() is { } lack)
         {
-            Publish(problem);
-            // Missing language data can be fetched right here; there is no need to go looking for it in the settings.
-            _download.IsVisible = _status.IsVisible && OcrSetup.CanDownload(main.Settings);
+            Publish(lack.Text);
+            // What is lacking can be fetched right here; there is no need to go looking for it in the settings. The
+            // question whether to is put once; the button stays for a later yes.
+            _download.IsVisible = _status.IsVisible && lack.CanFetch;
+            main.Supplies.Offer();
             return;
         }
 
@@ -479,10 +481,11 @@ public sealed class EditTool : Tool
     {
         StopReadingArea();
         if (area.Width < 6 || area.Height < 6 || main.Session.View is not { } view) return;
-        if (OcrSetup.Problem(main.Settings) is { } problem)
+        if (main.Supplies.Lack() is { } lack)
         {
-            _status.SetText(problem);
-            _download.IsVisible = _status.IsVisible && OcrSetup.CanDownload(main.Settings);
+            _status.SetText(lack.Text);
+            _download.IsVisible = _status.IsVisible && lack.CanFetch;
+            main.Supplies.Offer();
             return;
         }
 
@@ -521,21 +524,6 @@ public sealed class EditTool : Tool
         _status.SetText(result.Lines.Count == 0 ? Loc.Get("StatusAreaNothing")
             : doubtful == 0 ? Loc.Format("StatusAreaRead", result.Lines.Count)
             : Loc.Format("StatusAreaReadDoubt", result.Lines.Count, doubtful));
-    }
-
-    private async Task DownloadLanguages(ToolContext context)
-    {
-        var missing = TessData.Missing(context.Settings.OcrLanguages);
-        for (var i = 0; i < missing.Count; i++)
-        {
-            var index = i;
-            context.Status(Loc.Format("SettingsDownloading", Languages.Get(missing[i]).NativeName));
-            var progress = new Progress<double>(p => context.Progress.Report((index + p) / missing.Count));
-            await TessData.DownloadAsync(missing[i], progress, context.Cancel);
-        }
-
-        context.Status(Loc.Get("SettingsDownloaded"));
-        context.Main.RefreshWhenIdle();
     }
 
     // ---- changing text the page already has ----------------------------------------------------------------------
