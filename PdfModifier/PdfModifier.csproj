@@ -29,6 +29,12 @@
         <AvaloniaResource Include="Assets\app.ico" />
     </ItemGroup>
 
+    <!-- Every build that is handed on carries the licence and the list of what it is built on, as their terms ask. -->
+    <ItemGroup>
+        <None Include="..\LICENSE" Link="LICENSE.txt" CopyToPublishDirectory="PreserveNewest" />
+        <None Include="..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+
     <!-- A Linux build brings along what puts it into the application menu: the entry, its icon and the scripts
          that install and remove both (see packaging/linux). -->
     <ItemGroup Condition="'$(RuntimeIdentifier)' != '' And $(RuntimeIdentifier.StartsWith('linux'))">

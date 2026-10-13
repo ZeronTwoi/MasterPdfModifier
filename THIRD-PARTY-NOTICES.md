@@ -1,6 +1,9 @@
 # Third-party components
 
-PDF Modifier is built on the following open-source components. Each remains under its own licence.
+PDF Modifier is built on the following open-source components. Each remains under its own licence; the licence
+texts are at the links. None of them is a paid or restricted product.
+
+## What the app works with
 
 | Component | Used for | Licence |
 | --- | --- | --- |
@@ -10,8 +13,26 @@ PDF Modifier is built on the following open-source components. Each remains unde
 | [Tesseract .NET wrapper](https://github.com/charlesw/tesseract) | Loading Tesseract on Windows | Apache-2.0 |
 | [tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast) (downloaded on request, not shipped) | Language data for text recognition | Apache-2.0 |
 | [SkiaSharp](https://github.com/mono/SkiaSharp) / [Skia](https://skia.org/) | Image decoding, encoding and drawing | MIT / BSD-3-Clause |
+
+## What the window is made of
+
+| Component | Used for | Licence |
+| --- | --- | --- |
 | [Avalonia](https://github.com/AvaloniaUI/Avalonia) | User interface | MIT |
+| [HarfBuzz](https://github.com/harfbuzz/harfbuzz) (through HarfBuzzSharp, part of [SkiaSharp](https://github.com/mono/SkiaSharp)) | Shaping the text of the interface | MIT |
+| [ANGLE](https://chromium.googlesource.com/angle/angle) (comes with Avalonia on Windows) | Drawing the interface with the graphics card | BSD-3-Clause |
+| [MicroCom](https://github.com/kekekeks/MicroCom) (comes with Avalonia) | Talking to Windows | MIT |
+| [Tmds.DBus.Protocol](https://github.com/tmds/Tmds.DBus) (comes with Avalonia) | Talking to the Linux desktop | MIT |
 | [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) | View-model helpers | MIT |
+
+## What it runs on
+
+| Component | Used for | Licence |
+| --- | --- | --- |
+| [.NET](https://github.com/dotnet/runtime), with its Microsoft.Extensions and System.Security libraries | The runtime; it is inside the self-contained builds | MIT |
 
 Fonts are not shipped. New text uses fonts installed on the computer; the glyphs that are used get embedded in the
 document, as the fonts' licences generally allow for documents.
+
+PDF Modifier is an independent project. It is not affiliated with or endorsed by any of the projects and companies
+named here.

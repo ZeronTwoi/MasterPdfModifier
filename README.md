@@ -1,195 +1,188 @@
-<img src="PdfModifier/Assets/app.png" width="72" alt="PDF Modifier icon">
+<p align="center">
+  <img src="PdfModifier/Assets/app.png" width="96" alt="PDF Modifier icon">
+</p>
 
-# PDF Modifier
+<h1 align="center">PDF Modifier</h1>
 
-A free, open-source desktop app for working on PDF files. It runs on Windows and Linux and is written in C# (.NET 10)
-on top of native engines: PDFium for rendering and editing, Tesseract for text recognition, Skia for imaging.
+<p align="center">
+  A free, open-source desktop app for editing, organising, cleaning up and compressing PDF files.<br>
+  It works on scanned pages as well as on typed ones. For Windows and Linux.
+</p>
 
-The interface is available in English, Español, Deutsch, Русский, Français, 日本語, Português and Türkçe
-(English by default; change it under **Settings**).
+<p align="center">
+  <img alt="Licence: MIT" src="https://img.shields.io/badge/licence-MIT-4A5BE6">
+  <img alt="Platforms: Windows and Linux" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-4A5BE6">
+  <img alt="Built with .NET 10" src="https://img.shields.io/badge/.NET-10-4A5BE6">
+  <img alt="Interface in 8 languages" src="https://img.shields.io/badge/languages-8-4A5BE6">
+</p>
 
-## What it does
+<p align="center">
+  <img src="docs/images/cut-sheet.png" width="920" alt="The PDF Modifier window: the tools on the left, the page in the middle with four pages found on one scanned sheet, the settings of the tool on the right">
+</p>
 
-| Area | Tools |
+## What it can do
+
+22 tools in four groups, all in one window:
+
+| Group | Tools |
 | --- | --- |
-| Edit | Edit text and images, add watermark, remove watermarks, page numbers, flatten, metadata |
-| Pages | Merge, split, cut sheets that show several pages into pages of their own, rotate, delete, reorder, insert (blank pages, other PDFs, images), extract (to PDF or PNG/JPEG/WebP), scale, crop (automatic, margins, drawn area) |
-| Optimise | Compress, improve clarity of scans, make searchable (OCR), automate |
-| Review and protect | Compare two PDFs, password protect |
+| **Edit** | Change the text and images of a page, add text boxes and pictures, erase · add a watermark · remove watermarks · page numbers · flatten · metadata |
+| **Pages** | Merge · split · cut a sheet that shows several pages into pages of their own · rotate · delete · reorder · insert (blank pages, other PDFs, images) · extract (to PDF or PNG/JPEG/WebP) · scale · crop |
+| **Optimise** | Compress one document or a whole folder · improve the clarity of scans · make scans searchable (OCR) · automate a chain of steps |
+| **Review and protect** | Compare two PDFs · protect with a password |
 
-**Pages are text, pictures of text, or both, and the tools work on all three.** A page that is a scan is read by
-text recognition; a scan that already carries a search layer brings its text along; a page that mixes a scan with typed
-text (a reference number stamped on it, a typed header) has both kinds offered side by side. The same goes for the
-other tools: watermarks are removed whether they are objects laid over the page or part of the scanned picture,
-"make searchable" adds only what is not text already, clean-up handles scans stored as one picture or in strips.
+## What sets it apart
 
-**You see what a tool will do before it does it.** Watermarks, page numbers, rotation, scaling, compression, clean-up
-and watermark removal are shown on the page as you change their settings, marked as a preview; cropping shows the part
-that will be kept. Nothing changes in the document until you press Apply, and everything can be undone.
+- **Scans are not second-class.** Most PDFs people actually have are pictures of pages. Text is found in them by
+  text recognition and can be changed; watermarks are removed whether they lie over the page or are part of the
+  scanned picture; pages that mix a scan with typed text have both kinds offered side by side.
+- **You see what a tool will do before it does it.** Watermarks, page numbers, rotation, scaling, compression,
+  clean-up and watermark removal are shown on the page while you change their settings, marked as a preview.
+  Nothing changes until you press Apply, and everything can be undone.
+- **It says when it is not sure.** Where the app decides something by itself (where one page ends on a sheet, what a
+  blurry line says), a slider sets how readily it decides, and what it doubts is marked red so you can check,
+  correct or leave it out.
+- **Your files stay on your computer.** No account, no upload, no tracking. The only thing ever fetched from the
+  internet is language data for text recognition, from the official Tesseract repository, and only when you ask
+  for it.
+- **Eight interface languages**: English, Español, Deutsch, Русский, Français, 日本語, Português and Türkçe. Light
+  or dark follows the setting of your desktop.
 
-**Edit text and images** is an editor, not a form:
+## A closer look
 
-- Text the page has is highlighted: blue for text of the document, orange for text found in the page image. Click a
-  line, type, apply. In a scan the old line is painted over in the colour of the paper and the new text set in a
-  matching size and colour.
-- New text goes into a box you draw on the page. Font, size, bold, italic, colour and alignment can be set before or
-  after; the box can be moved, resized, turned and typed into again at any time.
-- Images are placed by dragging out an area or with a click. Images used before are offered again under the Browse
-  button; with the pointer on one (or a right-click) it can be pinned, so it stays however many others follow, or
-  taken off the list. They can be moved, resized, turned and faded.
-- The eraser is told what it may touch: the page itself, text added afterwards, images added afterwards. The page is
-  painted over in the colour around the area or in one you choose.
-- What was added stays an object: it can be changed again later, also after the file was saved and reopened here.
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/edit-scan.png" alt="A scanned page with every line of text found and outlined"><br>
+      <b>Edit text, also in scans.</b> Blue is text of the document, orange is text found in the page image.
+      Click a line, type, apply.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/text-box.png" alt="A text box on a page, turned by thirty degrees, with handles"><br>
+      <b>Add text and images that stay objects.</b> Move, resize, turn and restyle them at any time, also after
+      the file was saved and opened again.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/remove-watermark.png" alt="A scanned page shown without its watermark, marked as a preview"><br>
+      <b>Remove watermarks with a preview.</b> Here the mark is part of the scan; the list on the left still shows
+      the page as it is.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/improve-clarity.png" alt="A blurry scan brought into focus, marked as a preview"><br>
+      <b>Clean up poor scans.</b> Say what is wrong with the pages (blurry, faint, a photograph with shadows) and
+      adjust the steps with the result on view.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/doubt-in-red.png" alt="A blurry scan with the lines that were hard to read outlined in red"><br>
+      <b>Doubts are marked red.</b> Lines that text recognition more guessed at than read can be read again, more
+      carefully, one area at a time.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/dark-theme.png" alt="The window in its dark colours, showing a watermark preview"><br>
+      <b>Light and dark.</b> The same window on a dark desktop.
+    </td>
+  </tr>
+</table>
 
-**Cut sheet into pages** is for a scan or photograph that shows two, four or more pages at once: an open book, pages
-lying next to each other on a table, a print with several pages per sheet.
+Every tool is described in the **[guide](docs/GUIDE.md)**, together with the keyboard and mouse shortcuts and the
+limits worth knowing.
 
-- The pages are found by the paper standing out from what it lies on, by the empty bands between them, or by the
-  shadow of a fold. Each is framed on the sheet and numbered with the place it will get.
-- Their order follows the page numbers printed on them, which are read from the picture. Pages without a number stay
-  where reading order puts them; without any numbers the order is left to right, top to bottom. It can also be set
-  to right to left or column by column, or by clicking the pages one after the other.
-- Every frame can be moved, resized or removed, and frames can be drawn by hand. When nothing is found the sheet can
-  be divided evenly instead (two across, two down, 2 × 2, or any grid).
-- Cutting gives each page what is on its part of the sheet and nothing else: its text, and of a picture only the
-  pixels that show. Several sheets are cut in one go.
-- A sheet is only divided when enough speaks for it: a band that is wide for the page, stands out among the other
-  gaps on it and matches the margins around it. Gaps between paragraphs do not make two pages of one. How much is
-  needed is set with the **detection limit**. Where the outcome is a close call, the frames are red and so is the
-  mark the sheet gets in the page list, so one look down the list shows what to check. A doubtful sheet can be
-  corrected, confirmed as right, left out, or simply taken out of the selection.
+## Get it
 
-**The page list is where pages come and go.**
-
-- Drop pictures (PNG, JPEG, WebP, BMP, GIF) or PDF files into it and they become pages at the place they are dropped;
-  dropped anywhere into an empty window they become the document. A JPEG is stored as it is, without being
-  compressed a second time.
-- Drag pages within the list to put them in another order: one page, or all that are selected.
-- Drag a page out of the window, onto a folder or the desktop, and it arrives there as a PNG picture.
-- Delete removes the selected pages; the buttons under the list and the right-click menu also turn them and save
-  them as pictures.
-
-**Poor scans** get more help than good ones need:
-
-- *Improve clarity* starts from what is wrong with the pages: an ordinary scan, blurry print, faint or broken print,
-  a photograph with shadows. Each choice sets the single steps, which can then be adjusted with the page on view
-  showing the result. Blurry print is brought back into focus rather than merely sharpened, thin print is made
-  heavier, uneven light is evened out in colour, and coarse scans can be doubled in resolution first.
-- Lines that text recognition more guessed at than read are shown in red, in the editor and in *Make searchable*.
-- *Read scans carefully* reads every page several ways (focused and enlarged, in pure black and white) and keeps the
-  surest reading of each line. It is several times slower and meant for scans that need it.
-- A passage that came out wrong can be marked and is then read on its own, with every strength of focusing tried:
-  *Read an area more carefully* in the editor, *Mark a passage* in *Make searchable*.
-
-**Compress** works on the open document, with the page on view showing what the images will look like, or on a
-whole folder. For a folder, *Measure only* lists what every file would weigh without writing anything; the run
-itself writes the compressed files into a folder of their own (or in place of the originals, after asking) and lists
-the sizes before and after, file by file and in total.
-
-**Detection languages** are chosen in Settings; several can be ticked at once, and the language of each page is then
-worked out automatically. Language data (2–15 MB per language) is downloaded on request from the official Tesseract
-repository, from Settings or right where it is first needed.
-
-**Automate** runs a chain of steps (improve clarity, remove watermarks, crop to content, flatten, OCR, compress, remove
-metadata) on the selected or all pages of the open document, or on a batch of files.
-
-## Getting around
-
-| To | Do this |
-| --- | --- |
-| Turn pages | ← / →, Page Up / Page Down, Home / End, or keep scrolling past the top or bottom of a page |
-| Zoom | Ctrl + wheel (around the pointer), Ctrl + plus / minus, Ctrl + 1 for 100 %, *Fit page*, *Fit width* |
-| Move the page | Drag it, drag with the middle button, or hold Space and drag |
-| Move an object | Drag it; the arrow keys move it by a point (with Shift by ten) |
-| Resize and turn an object | Pull a handle; the round handle turns (with Shift in steps of 15°) |
-| Remove an object | Delete |
-| Copy an object | Ctrl + D |
-| Find a tool | Type a word of its name, or of what it does, into the box above the tool list |
-| Add pages | Drop pictures or PDF files into the page list, or use the + above it |
-| Reorder pages | Drag them in the page list |
-| Get a page as a picture | Drag it out of the window |
-| Delete pages | Select them in the page list and press Delete |
-| Undo, redo | Ctrl + Z, Ctrl + Y |
-
-## Good to know
-
-- Text of the document is edited line by line. Text that follows on the same line moves along; paragraphs are not
-  re-wrapped. A line can be turned into a text box, which can then be moved and restyled freely.
-- When a replacement needs characters the document's own (usually cut-down) font lacks, a matching installed font is
-  embedded instead, so the look can differ slightly.
-- Text inside nested graphics (some programs wrap whole pages that way) cannot be changed in place. It is found all the
-  same and replaced the way text in a scan is: painted over and retyped.
-- Removing a mark from a scan changes the picture of the page. Marks lighter than the text and marks in a colour of
-  their own come out cleanly, also where they cross text; a black mark printed over black text cannot be told from it.
-- Pages on a sheet are cut out straight. One that lies askew in a photograph comes with the corners of what was
-  around it; *Improve clarity* straightens it afterwards.
-- Page numbers are read by text recognition, so they need its language data (Settings). Without it the pages of a
-  sheet are put in reading order.
-- Bringing print into focus helps where the letters are blurred but still there; how much is right depends on the
-  blur, so the slider is worth trying on the page on view. Print that has dissolved altogether stays unreadable.
-- Compression gains come from images. Text-only documents are already compact.
-- Merge, split and extract build new documents, so bookmarks are not carried over. In-place tools keep them.
-
-## Build and run
-
-Requires the .NET 10 SDK.
+PDF Modifier is at version 0.1.0. There is no installer or ready-made download yet: for now it is built from the
+source, which takes the [.NET 10 SDK](https://dotnet.microsoft.com/download) and three lines:
 
 ```
+git clone https://github.com/ZeronTwoi/MasterPdfModifier.git
+cd MasterPdfModifier
 dotnet run --project PdfModifier
-dotnet test
 ```
 
-Self-contained builds that need no installed .NET runtime:
+A build that runs on a computer without .NET, to keep or to pass on:
 
 ```
 dotnet publish PdfModifier -c Release -r win-x64 --self-contained -o publish/win-x64
 dotnet publish PdfModifier -c Release -r linux-x64 --self-contained -o publish/linux-x64
 ```
 
-### Name and icon on the desktop
+| | Windows | Linux |
+| --- | --- | --- |
+| **Start it** | Run `PdfModifier.exe`. It carries its own name and icon; pin it to the task bar or the Start menu from its right-click menu. | Run `sh install.sh` in the unpacked folder. That adds PDF Modifier to the application menu with its icon and to "Open with" for PDF files, without root. `sh uninstall.sh` takes it out again. |
+| **Text recognition** | Built in. It needs the Microsoft Visual C++ runtime, which most computers already have. | Install Tesseract from your distribution, for example `sudo apt install tesseract-ocr`. Language packs installed that way are used directly. |
 
-- **Windows:** `PdfModifier.exe` carries its icon and its name ("PDF Modifier"), so a folder, the task bar and the task
-  manager show them without anything being installed. Pin it to the task bar or the Start menu from its right-click
-  menu.
-- **Linux:** a program file has no icon of its own there; the application menu gets both from an entry. The Linux
-  build brings one along. In the folder the app was unpacked into, run
+Windows is where the app has been used most. The Linux build is made and packaged the same way but has been tried
+far less; reports of what works and what does not are welcome.
 
-  ```
-  sh install.sh
-  ```
+## Using it
 
-  That puts PDF Modifier into the application menu of the current user, with its icon, and offers it under
-  "Open with" for PDF files. Nothing needs root and the app stays where it is; `sh uninstall.sh` takes the entry out
-  again. The files behind it are in `packaging/linux`, the icon in `PdfModifier/Assets`.
+Open a PDF, or drop pictures into the window to start a document from them. Pick a tool on the left, set it up on
+the right, look at the preview on the page, press **Apply**. **Ctrl + Z** takes a step back, **Save** writes the
+file. Type a word into the box above the tools to find one by its name or by what it does.
 
-### Text recognition
+The [guide](docs/GUIDE.md) has the rest.
 
-- **Windows:** the engine is bundled. It needs the Microsoft Visual C++ runtime, which most machines already have.
-- **Linux:** install Tesseract from your distribution, e.g. `sudo apt install tesseract-ocr`. Language packs installed
-  that way (`tesseract-ocr-deu`, …) are used directly.
+## For developers
 
-### Tests
+```
+dotnet build
+dotnet test
+```
 
-The suite generates its own documents, and drives the real window with mouse and keyboard without needing a screen.
-Two optional environment variables:
+- `PdfModifier.Core` – all PDF work, no user interface. Every operation takes a document as bytes and returns a new
+  one.
+- `PdfModifier` – the desktop app (Avalonia).
+- `PdfModifier.Tests` – unit tests for the core, and tests that drive the real window with mouse and keyboard
+  without needing a screen.
+- `packaging/linux` – the application menu entry for Linux and the scripts that install and remove it.
+- `docs` – the guide and the pictures on this page.
+
+The test suite generates its own documents. Three optional environment variables:
 
 - `PDFMODIFIER_TESSDATA` – a folder with `*.traineddata` files. Recognition tests run when the data is there and are
-  skipped otherwise. The app honours the same variable, e.g. for a portable install.
-- `PDFMODIFIER_SCREENSHOTS` – a folder to receive pictures of the window in each tested state.
+  skipped otherwise. The app honours the same variable, for example for a portable install.
+- `PDFMODIFIER_SCREENSHOTS` – a folder to receive pictures of the window in each tested state. The pictures on this
+  page were made that way.
 - `PDFMODIFIER_SAMPLES` – a folder to receive sample files for trying things by hand: a text document, scans, sheets
   with several pages, a page of paragraphs, a blurry scan.
 
 A tool that fails tells the user so in a message box. Without a screen nobody can close it, so the window tests only
 drive what succeeds; `dotnet test --blame-hang --blame-hang-timeout 200s` ends a run that hangs all the same.
 
-## Layout
+## Feedback
 
-- `PdfModifier.Core` – all PDF work, no user interface. Every operation takes a document as bytes and returns a new one.
-- `PdfModifier` – the Avalonia desktop app.
-- `PdfModifier.Tests` – unit tests for the core and headless tests that drive the real window.
-- `packaging/linux` – the application menu entry for Linux and the scripts that install and remove it.
+This is an early version. If something does not work, or a tool does less than you need, please open an issue and
+say what kind of PDF it was (typed, scanned, or both) and what you expected to happen.
 
 ## Licence
 
-MIT, see [LICENSE](LICENSE). Third-party components are listed in
-[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+PDF Modifier is released under the [MIT licence](LICENSE): free to use, change and pass on, also commercially, as
+long as the licence text stays with it.
+
+## Built on
+
+PDF Modifier stands on the work of these open-source projects. None of them is a paid or restricted product; each
+remains under its own licence, which asks for the credit given here.
+
+| Project | What it does here | Licence |
+| --- | --- | --- |
+| [PDFium](https://pdfium.googlesource.com/pdfium/), in the builds of [pdfium-binaries](https://github.com/bblanchon/pdfium-binaries) | Showing pages, reading their text, editing pages and what is on them | BSD-3-Clause / Apache-2.0 |
+| [PDFsharp](https://github.com/empira/PDFsharp) | Metadata, password protection, removing unused objects | MIT |
+| [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) and [Leptonica](http://www.leptonica.org/) | Text recognition | Apache-2.0 / BSD-2-Clause |
+| [Tesseract .NET wrapper](https://github.com/charlesw/tesseract) | Loading Tesseract on Windows | Apache-2.0 |
+| [tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast) (downloaded on request, not included) | Language data for text recognition | Apache-2.0 |
+| [SkiaSharp](https://github.com/mono/SkiaSharp) and [Skia](https://skia.org/) | Reading, writing and drawing images | MIT / BSD-3-Clause |
+| [Avalonia](https://github.com/AvaloniaUI/Avalonia) | The user interface | MIT |
+| [HarfBuzz](https://github.com/harfbuzz/harfbuzz) | Shaping the text of the interface | MIT |
+| [ANGLE](https://chromium.googlesource.com/angle/angle) | Drawing the interface on Windows | BSD-3-Clause |
+| [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) | Connecting the interface to the logic behind it | MIT |
+| [.NET](https://github.com/dotnet/runtime) | The runtime the app runs on, included in the self-contained builds | MIT |
+
+The full list, with the smaller parts these bring along, is in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md); it
+travels with every build. Fonts are not included: new text uses the fonts installed on the computer.
+
+PDF Modifier is an independent project. It is not affiliated with or endorsed by any of the projects and companies
+named here; their names are used only to say what the app is built on.
