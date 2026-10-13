@@ -47,7 +47,8 @@
   says which pages it is going to work on.
 - **Your files stay on your computer.** No account, no upload, no tracking. The only things ever fetched from the
   internet are what text recognition needs (language data from the official Tesseract project and, where it is
-  missing, the runtime or program it runs on), and only after the app has asked you.
+  missing, the runtime or program it runs on) and, if you want them, new versions of the app itself; each only
+  after the app has asked you.
 - **Nothing to set up by hand.** A setup that asks what a setup should ask, or one file to start as it is. What the
   app needs beyond itself it fetches on its own, after asking; nobody has to open a command line.
 - **New versions, if you want to hear of them.** The app asks once. With a yes it takes one look per start and
