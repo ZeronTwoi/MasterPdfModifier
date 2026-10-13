@@ -1,3 +1,9 @@
+**New in 0.2.0**
+
+- *Cut sheet into pages* leaves out what lies around a page: the dark edge of the scanner, the rim of pages under an open book, the shadow in its fold, the black along a photocopy. A slider sets how close to the print the cut goes; strips of a set width can be taken off by hand instead. An edge that is not certain is marked red, on the sheet and in the page list.
+- *Rotate pages* is buttons that act at once (90° left, 90° right, 180°, mirrored left to right or top to bottom). It also finds the pages that lie on their side or stand on their head, shows each the way it will stand, and sets them all upright.
+- The settings of every tool are quicker to set: choices are buttons that are all on view, sliders offer the values wanted most, where a page number or a watermark goes is clicked on a small picture of a page, crop shows a frame that is pulled into place, and every tool says which pages it is going to work on.
+
 Download the file for your computer, start it, use it. No command line is involved anywhere.
 
 **Windows** – `MasterPdfModifier-Setup.exe` installs the app: it asks where to, whether you want a shortcut on the desktop and whether to offer the app under "Open with" for PDF files, and needs no administrator. `MasterPdfModifier.exe` is the whole app in one file, for those who would rather not install anything: double-click it. Windows may say that it does not know either of them, because they are new and not signed: choose *More info*, then *Run anyway*.
