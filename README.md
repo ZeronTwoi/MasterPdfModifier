@@ -117,6 +117,10 @@ Download it, start it, use it. There is no command line anywhere.
 | **Start it** | Run `MasterPdfModifier-Setup.exe`. The setup speaks the app's eight languages and asks where to install, whether you want a shortcut on the desktop and whether to offer the app under "Open with" for PDF files. It installs for you alone, so no administrator is needed, and the app can be removed again like any other. Rather not install anything? `MasterPdfModifier.exe` is the whole app in one file: double-click it, wherever it lies. | Debian, Ubuntu, Mint and their relatives: open `MasterPdfModifier.deb` and let the software centre install it; the app is in the application menu afterwards. Others: unpack the archive and start `MasterPdfModifier`; it offers to put itself into the application menu. |
 | **What it fetches by itself** | Language data for text recognition. On a freshly set-up Windows also the Microsoft Visual C++ runtime, which the text recognition is built on, straight from Microsoft. | Language data for text recognition. The Tesseract program, where it is not installed yet, from the distribution (the package brings it along). |
 
+<p align="center">
+  <img src="docs/images/setup.png" width="520" alt="The setup for Windows, asking whether to create a desktop shortcut and whether to offer the app under Open with for PDF files">
+</p>
+
 Windows may say that it does not know the setup or the app, because they are new and not signed: choose *More
 info*, then *Run anyway*.
 
