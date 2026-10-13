@@ -68,8 +68,13 @@ public sealed class Settings
             // Unreadable preferences are not worth failing the start for; fall back to the defaults.
         }
 
-        return new Settings();
+        // Before anything was chosen, the app speaks the language of the computer, as its installer does.
+        return new Settings { UiLanguage = LanguageOf(System.Globalization.CultureInfo.CurrentUICulture) };
     }
+
+    /// <summary>The language of the interface for a computer set to this culture: its own where the app has it, English otherwise.</summary>
+    internal static string LanguageOf(System.Globalization.CultureInfo culture) =>
+        Languages.IsSupported(culture.TwoLetterISOLanguageName) ? Languages.Get(culture.TwoLetterISOLanguageName).Code : Languages.Default;
 
     public bool IsPinned(string path) => PinnedImages.Any(p => p.Equals(path, StringComparison.OrdinalIgnoreCase));
 

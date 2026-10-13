@@ -155,6 +155,16 @@ public class UpdateCheckTests
         window.Close();
     }
 
+    [Theory]
+    [InlineData("tr-TR", "tr")]
+    [InlineData("pt-BR", "pt")]
+    [InlineData("de-AT", "de")]
+    [InlineData("ja-JP", "ja")]
+    [InlineData("en-GB", "en")]
+    [InlineData("zh-CN", "en")]
+    public void BeforeAnythingIsChosenTheAppSpeaksTheLanguageOfTheComputerIfItCan(string culture, string language) =>
+        Assert.Equal(language, Settings.LanguageOf(new System.Globalization.CultureInfo(culture)));
+
     [AvaloniaFact]
     public async Task WithoutNewsTheSettingsShowNoSign()
     {

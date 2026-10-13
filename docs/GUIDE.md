@@ -128,8 +128,9 @@ metadata) on the selected or all pages of the open document, or on a batch of fi
 
 ## Languages
 
-The interface is available in English, Español, Deutsch, Русский, Français, 日本語, Português and Türkçe (English
-by default; change it under **Settings**, the button with the sliders at the top).
+The interface is available in English, Español, Deutsch, Русский, Français, 日本語, Português and Türkçe. It starts
+in the language of the computer where that is one of these, in English otherwise; change it under **Settings**, the
+button with the sliders at the top. The Windows setup speaks the same eight languages.
 
 **Detection languages**, the ones text recognition looks for in scans, are chosen in the same place; several can be
 ticked at once, and the language of each page is then worked out automatically.
