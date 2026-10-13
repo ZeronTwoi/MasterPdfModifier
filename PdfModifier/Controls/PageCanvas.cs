@@ -263,7 +263,8 @@ public class PageCanvas : Control
                 foreach (var obj in Objects)
                     DrawObject(context, obj);
 
-        if (Overlays != null && Mode == CanvasMode.Select)
+        // Also where a frame is drawn on the page: what the frame takes in is marked the same way.
+        if (Overlays != null && Mode is CanvasMode.Select or CanvasMode.Area)
             foreach (var overlay in Overlays)
             {
                 var color = overlay.Doubtful ? DoubtColor : overlay.IsScan ? ScanColor : TextColor;

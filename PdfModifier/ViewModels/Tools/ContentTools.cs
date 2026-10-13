@@ -34,6 +34,29 @@ internal static class OcrSetup
     }, false));
 
     public static string LanguageNames(IEnumerable<string> codes) => string.Join(", ", codes.Select(code => Languages.Get(code).NativeName));
+
+    /// <summary>
+    /// How scans are to be read, for work that is worth doing without them as well (looking for a phrase, taking
+    /// the text out of pages). What reading lacks is asked about and fetched as ever; but where it stays lacking,
+    /// because the user said "not now" or there is no way to fetch it, the work goes on with the pages it can do and
+    /// gets the reason to pass on, instead of ending with a message.
+    /// </summary>
+    public static async Task<(OcrSettings? Reading, string? WhyNot)> ReadingFor(ToolContext context)
+    {
+        try
+        {
+            await context.Main.Supplies.Ensure(context);
+            return (From(context.Settings), null);
+        }
+        catch (UserException e)
+        {
+            return (null, e.Message);
+        }
+        catch (OperationCanceledException) when (!context.Cancel.IsCancellationRequested)
+        {
+            return (null, context.Main.Supplies.Lack()?.Text);
+        }
+    }
 }
 
 /// <summary>Reads files a preview needs once and keeps them, so dragging a slider does not read the disk again and again.</summary>

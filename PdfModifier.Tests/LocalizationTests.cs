@@ -40,6 +40,24 @@ public partial class LocalizationTests
         Assert.All(translated.Values, text => Assert.False(string.IsNullOrWhiteSpace(text)));
     }
 
+    /// <summary>
+    /// A text written twice under one name is no error to the compiler: the later one silently takes the place of
+    /// the earlier, and something in the window says the wrong thing. So the files themselves are looked through.
+    /// </summary>
+    [Fact]
+    public void NoTextIsWrittenTwiceUnderOneName()
+    {
+        var root = AppDomain.CurrentDomain.BaseDirectory;
+        while (!File.Exists(Path.Combine(root, "PdfModifier.sln"))) root = Path.GetDirectoryName(root) ?? throw new DirectoryNotFoundException();
+        var files = Directory.GetFiles(Path.Combine(root, "PdfModifier", "Localization"), "Strings*.cs");
+        Assert.Equal(Languages.All.Count(), files.Length);
+
+        var twice = files.SelectMany(file => EntryKey().Matches(File.ReadAllText(file)).Select(match => match.Groups[1].Value)
+            .GroupBy(key => key).Where(group => group.Count() > 1).Select(group => $"{Path.GetFileName(file)}: {group.Key}"));
+
+        Assert.Empty(twice);
+    }
+
     [Fact]
     public void EveryKeyUsedByTheAppExists()
     {
@@ -89,8 +107,12 @@ public partial class LocalizationTests
     private static partial Regex ResourceKey();
 
     // Loc.Get("X"), Loc.Format("X", SetKey("X"), and field constructors, whose first argument is the label key.
-    [GeneratedRegex(@"(?:Loc\.Get|Loc\.Format|SetKey|new (?:Text|Number|Slider|Bool|Toggle|Choice|Mode|Pages|File|FileList|Action|CheckList|Color|PieceList|Folder|Place)Field)\(""(\w+)""[,)]")]
+    [GeneratedRegex(@"(?:Loc\.Get|Loc\.Format|SetKey|new (?:Text|Number|Slider|Bool|Toggle|Choice|Mode|Pages|File|FileList|Action|CheckList|Color|PieceList|Folder|Place|List)Field)\(""(\w+)""[,)]")]
     private static partial Regex CodeKey();
+
+    // An entry of one of the dictionaries: ["Key"] = "…" at the start of a line.
+    [GeneratedRegex(@"^\s*\[""(\w+)""\]\s*=", RegexOptions.Multiline)]
+    private static partial Regex EntryKey();
 
     // new Choice("key", "LabelKey") — but not the literal form new Choice("key", "Text", true).
     [GeneratedRegex(@"new Choice\((?:""[^""]*""|nameof\([^)]*\)), ""(\w+)""\)")]

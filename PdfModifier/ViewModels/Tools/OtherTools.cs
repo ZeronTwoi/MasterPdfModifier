@@ -324,10 +324,12 @@ public static class ToolCatalog
         new PageNumbersTool(main),
         new FlattenTool(),
         new MetadataTool(main),
+        new BookmarksTool(main),
 
         new MergeTool(main),
         new SplitTool(),
         new SheetTool(main),
+        new PerSheetTool(),
         new RotateTool(main),
         new DeleteTool(),
         new ReorderTool(main),
@@ -341,7 +343,12 @@ public static class ToolCatalog
         new OcrTool(main),
         new AutomateTool(main),
 
+        new SearchTool(main),
+        new CopyTool(main),
+        new PicturesTool(main),
+
         new CompareTool(main),
+        new ArchiveTool(main),
         new ProtectTool(),
 
         new SettingsTool(main)

@@ -22,14 +22,15 @@
 
 ## What it can do
 
-22 tools in four groups, all in one window:
+28 tools in five groups, all in one window:
 
 | Group | Tools |
 | --- | --- |
-| **Edit** | Change the text and images of a page, add text boxes and pictures, erase · add a watermark · remove watermarks · page numbers · flatten · metadata |
-| **Pages** | Merge · split · cut a sheet that shows several pages into pages of their own, without the scanner edge and shadows around them · turn and mirror, and set upright the pages that lie on their side · delete · reorder · insert (blank pages, other PDFs, images) · extract (to PDF or PNG/JPEG/WebP) · scale · crop |
+| **Edit** | Change the text and images of a page, add text boxes and pictures, erase · add a watermark · remove watermarks · page numbers · flatten · metadata · bookmarks, by hand or proposed from the headings |
+| **Pages** | Merge · split · cut a sheet that shows several pages into pages of their own, without the scanner edge and shadows around them · put several pages on each sheet · turn and mirror, and set upright the pages that lie on their side · delete · reorder · insert (blank pages, other PDFs, images) · extract (to PDF or PNG/JPEG/WebP) · scale · crop |
 | **Optimise** | Compress one document or a whole folder · improve the clarity of scans · make scans searchable (OCR) · automate a chain of steps |
-| **Review and protect** | Compare two PDFs · protect with a password |
+| **Find and take out** | Search a document or a whole folder of PDFs, scans included · copy text or a picture of a page or of a part you mark · extract the pictures a document is made with, at their full resolution |
+| **Review and protect** | Compare two PDFs · check against PDF/A · protect with a password |
 
 ## What sets it apart
 

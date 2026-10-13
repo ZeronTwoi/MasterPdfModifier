@@ -33,9 +33,10 @@ public class RowPanel : Panel
         var shown = Shown();
         var share = double.IsInfinity(availableSize.Width) ? double.PositiveInfinity : ShareOf(shown, availableSize.Width);
         double width = 0, height = 0;
-        // The hidden ones are measured too, though they take no room: a child that was never measured does not
-        // say so when it is shown later, and the row would stay as it was.
-        foreach (var hidden in Children.Except(shown)) hidden.Measure(default);
+        // The hidden ones are measured too, though they take no room, and with room to grow into: a child that
+        // was never measured, or was told there is no room at all, does not say so when it is shown later, and
+        // the row would stay as it was.
+        foreach (var hidden in Children.Except(shown)) hidden.Measure(availableSize);
         foreach (var child in shown)
         {
             child.Measure(new Size(IsSwitch(child) ? SwitchWidth : share, availableSize.Height));

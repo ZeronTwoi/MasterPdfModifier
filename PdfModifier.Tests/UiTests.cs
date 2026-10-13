@@ -91,8 +91,8 @@ public class UiTests
         await Settle();
 
         Assert.False(vm.HasDocument);
-        Assert.Equal(23, vm.Tools.Count);
-        Assert.Equal(5, vm.Tools.Count(t => t.StartsGroup));
+        Assert.Equal(29, vm.Tools.Count);
+        Assert.Equal(6, vm.Tools.Count(t => t.StartsGroup));
         Capture(window, "01-empty");
         window.Close();
     }

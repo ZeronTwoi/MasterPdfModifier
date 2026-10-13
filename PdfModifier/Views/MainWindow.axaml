@@ -684,6 +684,27 @@
                                             </ItemsControl>
                                         </StackPanel>
                                     </DataTemplate>
+                                    <!-- Rows to click: what was found, what there is to go to. -->
+                                    <DataTemplate DataType="vm:ListField">
+                                        <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="5">
+                                            <TextBlock Classes="label" Text="{Binding Label}"
+                                                       IsVisible="{Binding Label, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                            <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" MaxHeight="{Binding MaxHeight}"
+                                                     IsVisible="{Binding HasItems}" CornerRadius="6"
+                                                     BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" Background="{DynamicResource ControlFill}">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:ListItem">
+                                                        <StackPanel Margin="{Binding Indent}" Spacing="1">
+                                                            <TextBlock Classes.invalid="{Binding Warns}" Text="{Binding Title}" TextWrapping="Wrap" MaxLines="3"
+                                                                       TextTrimming="CharacterEllipsis" FontSize="13" />
+                                                            <TextBlock Classes="muted" Text="{Binding Detail}" FontSize="11.5" IsVisible="{Binding HasDetail}"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </StackPanel>
+                                    </DataTemplate>
                                     <DataTemplate DataType="vm:RowField">
                                         <ItemsControl IsVisible="{Binding IsVisible}" ItemsSource="{Binding Fields}">
                                             <ItemsControl.ItemsPanel>

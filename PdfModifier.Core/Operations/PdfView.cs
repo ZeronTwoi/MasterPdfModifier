@@ -109,6 +109,39 @@ public sealed class PdfView : IDisposable
         }
     }
 
+    /// <summary>The lines of text the page carries as text, each with its words and where they stand (visual coordinates).</summary>
+    public IReadOnlyList<OcrLine> GetLines(int pageIndex)
+    {
+        lock (PdfDoc.Sync)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            using var page = _doc.LoadPage(pageIndex);
+            return PdfText.Lines(page);
+        }
+    }
+
+    /// <summary>The lines of text the page carries as text, with the print each is set in: the size of its letters, and whether they are bold.</summary>
+    public IReadOnlyList<PrintedLine> GetPrintedLines(int pageIndex)
+    {
+        lock (PdfDoc.Sync)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            using var page = _doc.LoadPage(pageIndex);
+            return PdfText.PrintedLines(page);
+        }
+    }
+
+    /// <summary>The pictures a page holds, in the order it draws them; those smaller than <paramref name="smallest"/> pixels both ways left out.</summary>
+    public IReadOnlyList<PagePicture> GetPictures(int pageIndex, int smallest = 0)
+    {
+        lock (PdfDoc.Sync)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            using var page = _doc.LoadPage(pageIndex);
+            return PdfPictures.On(page, smallest);
+        }
+    }
+
     public string GetText(int pageIndex)
     {
         lock (PdfDoc.Sync)
