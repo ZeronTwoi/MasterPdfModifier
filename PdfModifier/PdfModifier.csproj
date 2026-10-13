@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <Version>0.1.0</Version>
+    </PropertyGroup>
+
+    <!-- What the program shows of itself outside its window: in a folder, on the task bar, in the task manager. -->
+    <PropertyGroup>
+        <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+        <AssemblyTitle>PDF Modifier</AssemblyTitle>
+        <Product>PDF Modifier</Product>
+        <Description>Edit, organise, clean up and compress PDF files</Description>
+        <Company>PDF Modifier contributors</Company>
+        <Copyright>Copyright © 2026 PDF Modifier contributors</Copyright>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="PdfModifier.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <AvaloniaResource Include="Assets\app.ico" />
+    </ItemGroup>
+
+    <!-- A Linux build brings along what puts it into the application menu: the entry, its icon and the scripts
+         that install and remove both (see packaging/linux). -->
+    <ItemGroup Condition="'$(RuntimeIdentifier)' != '' And $(RuntimeIdentifier.StartsWith('linux'))">
+        <None Include="..\packaging\linux\*" Link="%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
+        <None Include="Assets\app.png" Link="pdfmodifier.png" CopyToPublishDirectory="PreserveNewest" />
+        <None Include="Assets\app.svg" Link="pdfmodifier.svg" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="11.3.22" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\PdfModifier.Core\PdfModifier.Core.csproj" />
+    </ItemGroup>
+
+</Project>

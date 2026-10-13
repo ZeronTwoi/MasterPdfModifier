@@ -1,0 +1,6 @@
+# Read by Linux, which takes a Windows line ending for part of the line: keep these as they are on every machine.
+*.sh text eol=lf
+*.desktop text eol=lf
+
+*.ico binary
+*.png binary

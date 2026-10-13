@@ -1,0 +1,28 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PdfModifier", "PdfModifier\PdfModifier.csproj", "{A48E005D-9D51-468C-8A9A-088B2CEFFAFA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PdfModifier.Core", "PdfModifier.Core\PdfModifier.Core.csproj", "{ECE84C5E-3462-4B89-B774-595D0453AAD5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PdfModifier.Tests", "PdfModifier.Tests\PdfModifier.Tests.csproj", "{3BD4C121-F673-4D0C-B141-60B3982775EF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A48E005D-9D51-468C-8A9A-088B2CEFFAFA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A48E005D-9D51-468C-8A9A-088B2CEFFAFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A48E005D-9D51-468C-8A9A-088B2CEFFAFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A48E005D-9D51-468C-8A9A-088B2CEFFAFA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ECE84C5E-3462-4B89-B774-595D0453AAD5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ECE84C5E-3462-4B89-B774-595D0453AAD5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ECE84C5E-3462-4B89-B774-595D0453AAD5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ECE84C5E-3462-4B89-B774-595D0453AAD5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3BD4C121-F673-4D0C-B141-60B3982775EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3BD4C121-F673-4D0C-B141-60B3982775EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3BD4C121-F673-4D0C-B141-60B3982775EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3BD4C121-F673-4D0C-B141-60B3982775EF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

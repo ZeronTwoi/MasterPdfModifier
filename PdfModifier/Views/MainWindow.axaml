@@ -1,0 +1,621 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:app="using:PdfModifier"
+        xmlns:vm="using:PdfModifier.ViewModels"
+        xmlns:controls="using:PdfModifier.Controls"
+        xmlns:views="using:PdfModifier.Views"
+        x:Class="PdfModifier.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="{Binding Title}"
+        Icon="/Assets/app.ico"
+        Width="1480" Height="920" MinWidth="1100" MinHeight="640"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource AppBackground}"
+        DragDrop.AllowDrop="True">
+
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenCommand}" />
+        <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+S" Command="{Binding SaveAsCommand}" />
+        <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
+        <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
+        <KeyBinding Gesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />
+        <KeyBinding Gesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}" />
+        <KeyBinding Gesture="Ctrl+D1" Command="{Binding ZoomActualSizeCommand}" />
+        <KeyBinding Gesture="PageUp" Command="{Binding PreviousPageCommand}" />
+        <KeyBinding Gesture="PageDown" Command="{Binding NextPageCommand}" />
+        <KeyBinding Gesture="Ctrl+Home" Command="{Binding FirstPageCommand}" />
+        <KeyBinding Gesture="Ctrl+End" Command="{Binding LastPageCommand}" />
+    </Window.KeyBindings>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- ============ Head of the window: the document and what is done with it as a whole ============ -->
+        <Border Classes="panel" Grid.Row="0" BorderThickness="0,0,0,1" Padding="14,0" Height="56">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="11" VerticalAlignment="Center">
+                    <Border Width="32" Height="32" CornerRadius="9" Background="{DynamicResource AccentBrush}">
+                        <controls:Icon Data="{x:Static controls:Icons.Document}" Foreground="White" Width="18" Height="18" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center" Spacing="1">
+                        <TextBlock Text="{x:Static app:AppInfo.Name}" FontWeight="SemiBold" FontSize="14" />
+                        <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasDocument}">
+                            <TextBlock Classes="muted" Text="{Binding DocumentName}" FontSize="12" MaxWidth="420" TextTrimming="CharacterEllipsis" />
+                            <!-- Shown while there are changes that are not saved yet. -->
+                            <Ellipse Width="7" Height="7" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center"
+                                     IsVisible="{Binding IsDirty}" ToolTip.Tip="{DynamicResource T_UnsavedChanges}" />
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                    <Button Classes="ghost" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" ToolTip.Tip="{DynamicResource T_Undo}">
+                        <controls:Icon Data="{x:Static controls:Icons.Undo}" />
+                    </Button>
+                    <Button Classes="ghost" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}" ToolTip.Tip="{DynamicResource T_Redo}">
+                        <controls:Icon Data="{x:Static controls:Icons.Redo}" />
+                    </Button>
+                    <Button Classes="ghost" Command="{Binding ShowSettingsCommand}" ToolTip.Tip="{DynamicResource T_ToolSettings}">
+                        <controls:Icon Data="{x:Static controls:Icons.Settings}" />
+                    </Button>
+                    <Border Classes="separator" />
+                    <Button Classes="ghost" Command="{Binding OpenCommand}" IsEnabled="{Binding IsIdle}">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <controls:Icon Data="{x:Static controls:Icons.Open}" />
+                            <TextBlock Text="{DynamicResource T_Open}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="ghost" Command="{Binding SaveAsCommand}" IsEnabled="{Binding HasDocument}">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <controls:Icon Data="{x:Static controls:Icons.SaveAs}" />
+                            <TextBlock Text="{DynamicResource T_SaveAs}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="accent" Command="{Binding SaveCommand}" IsEnabled="{Binding HasDocument}" Padding="14,6" MinHeight="32" Margin="5,0,0,0">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <controls:Icon Data="{x:Static controls:Icons.Save}" Width="16" Height="16" />
+                            <TextBlock Text="{DynamicResource T_Save}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ============ Foot of the window: what is going on ============ -->
+        <Border Classes="panel" Grid.Row="2" BorderThickness="0,1,0,0" Padding="14,0" Height="30">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="12">
+                <TextBlock Text="{Binding StatusText}" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
+                <ProgressBar Classes="thin" Grid.Column="1" Width="190" Minimum="0" Maximum="1" Value="{Binding Progress}"
+                             IsVisible="{Binding IsBusy}" VerticalAlignment="Center" />
+                <Button Classes="ghost small" Grid.Column="2" Content="{DynamicResource T_Cancel}" FontSize="12"
+                        Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" VerticalAlignment="Center" />
+                <TextBlock Classes="muted" Grid.Column="3" Text="{Binding PageSizeLabel}" FontSize="12" VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" ColumnDefinitions="238,176,*,356">
+
+            <!-- ============ Tools ============ -->
+            <Border Classes="panel" Grid.Column="0" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <Panel DockPanel.Dock="Top" Margin="12,12,12,4">
+                        <TextBox x:Name="ToolSearchBox" Classes="search" Text="{Binding ToolSearch}" Padding="32,6,8,6"
+                                 Watermark="{DynamicResource T_ToolSearch}" />
+                        <controls:Icon Data="{x:Static controls:Icons.Search}" Width="15" Height="15" Margin="10,0,0,0"
+                                       HorizontalAlignment="Left" VerticalAlignment="Center" IsHitTestVisible="False"
+                                       Foreground="{DynamicResource TextFaint}" />
+                    </Panel>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Margin="8,0,8,12">
+                            <ItemsControl ItemsSource="{Binding ToolGroups}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ToolGroup">
+                                        <StackPanel IsVisible="{Binding IsListed}">
+                                            <TextBlock Classes="group" Text="{Binding Title}" Margin="10,14,8,5" />
+                                            <ItemsControl ItemsSource="{Binding Tools}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:Tool">
+                                                        <Button Classes="nav" Classes.selected="{Binding IsSelected}" IsVisible="{Binding IsListed}"
+                                                                Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectToolCommand}"
+                                                                CommandParameter="{Binding}" ToolTip.Tip="{Binding Description}">
+                                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                                <controls:Icon Data="{Binding Icon}" Width="17" Height="17" VerticalAlignment="Center" />
+                                                                <TextBlock Grid.Column="1" Text="{Binding Title}" TextTrimming="CharacterEllipsis"
+                                                                           VerticalAlignment="Center" />
+                                                            </Grid>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Classes="muted" Text="{DynamicResource T_ToolSearchNone}" IsVisible="{Binding NoToolListed}"
+                                       Margin="10,18,10,0" TextWrapping="Wrap" FontSize="12.5" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
+            <!-- ============ Pages ============ -->
+            <Border Classes="panel alt" Grid.Column="1" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="18,10,8,4">
+                        <TextBlock Classes="group" Text="{Binding PagesTitle}" VerticalAlignment="Center" />
+                        <Button Classes="ghost small" Grid.Column="1" Command="{Binding AddPagesCommand}" IsEnabled="{Binding IsIdle}"
+                                ToolTip.Tip="{DynamicResource T_PagesAdd}">
+                            <controls:Icon Data="{x:Static controls:Icons.Plus}" Width="15" Height="15" />
+                        </Button>
+                    </Grid>
+
+                    <!-- What can be done with the pages that are selected. -->
+                    <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource PanelBorder}" BorderThickness="0,1,0,0" Padding="6,4"
+                            IsVisible="{Binding HasDocument}">
+                        <UniformGrid Rows="1" IsEnabled="{Binding IsIdle}">
+                            <Button Classes="ghost small" HorizontalAlignment="Stretch" Command="{Binding RotateSelectedPagesCommand}" CommandParameter="-90"
+                                    ToolTip.Tip="{DynamicResource T_RotateLeft}">
+                                <controls:Icon Data="{x:Static controls:Icons.RotateLeft}" Width="16" Height="16" />
+                            </Button>
+                            <Button Classes="ghost small" HorizontalAlignment="Stretch" Command="{Binding RotateSelectedPagesCommand}" CommandParameter="90"
+                                    ToolTip.Tip="{DynamicResource T_RotateRight}">
+                                <controls:Icon Data="{x:Static controls:Icons.RotateRight}" Width="16" Height="16" />
+                            </Button>
+                            <Button Classes="ghost small" HorizontalAlignment="Stretch" Command="{Binding ExportSelectedPagesCommand}"
+                                    ToolTip.Tip="{DynamicResource T_PagesExport}">
+                                <controls:Icon Data="{x:Static controls:Icons.Picture}" Width="16" Height="16" />
+                            </Button>
+                            <Button Classes="ghost small danger" HorizontalAlignment="Stretch" Command="{Binding DeleteSelectedPagesCommand}"
+                                    ToolTip.Tip="{DynamicResource T_PagesDelete}">
+                                <controls:Icon Data="{x:Static controls:Icons.Trash}" Width="16" Height="16" />
+                            </Button>
+                        </UniformGrid>
+                    </Border>
+
+                    <!-- Pages can be dragged within the list to reorder them and out of the window to get them as
+                         pictures; files dropped here become pages at the place they are dropped. -->
+                    <Panel x:Name="PagePanel" Background="Transparent" DragDrop.AllowDrop="True">
+                        <ListBox x:Name="PageList" Classes="pages" ItemsSource="{Binding Pages}" SelectionMode="Multiple" Background="Transparent">
+                            <ListBox.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="{DynamicResource T_PagesAdd}" Command="{Binding AddPagesCommand}" />
+                                    <Separator />
+                                    <MenuItem Header="{DynamicResource T_PagesExport}" Command="{Binding ExportSelectedPagesCommand}" />
+                                    <MenuItem Header="{DynamicResource T_RotateRight}" Command="{Binding RotateSelectedPagesCommand}" CommandParameter="90" />
+                                    <MenuItem Header="{DynamicResource T_RotateLeft}" Command="{Binding RotateSelectedPagesCommand}" CommandParameter="-90" />
+                                    <Separator />
+                                    <MenuItem Header="{DynamicResource T_PagesDelete}" Command="{Binding DeleteSelectedPagesCommand}" InputGesture="Delete" />
+                                </ContextMenu>
+                            </ListBox.ContextMenu>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PageItem">
+                                    <StackPanel Spacing="5">
+                                        <Panel>
+                                            <Border Classes="thumb" Width="{Binding DisplayWidth}" Height="{Binding DisplayHeight}">
+                                                <Image Source="{Binding Thumbnail}" Stretch="Fill" />
+                                            </Border>
+                                            <!-- What the active tool has to say about this page; red when it needs a look. -->
+                                            <Border Classes="badge" Classes.warn="{Binding Badge.Warns, FallbackValue=False}"
+                                                    IsVisible="{Binding HasBadge}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                    Margin="0,-6,-6,0" ToolTip.Tip="{Binding Badge.Tip}">
+                                                <TextBlock Text="{Binding Badge.Text}" />
+                                            </Border>
+                                        </Panel>
+                                        <TextBlock Classes="pagenumber" Text="{Binding Number}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <!-- Shows where what is being dragged will go. -->
+                        <Canvas IsHitTestVisible="False">
+                            <Border x:Name="DropMark" Height="3" CornerRadius="1.5" Background="{DynamicResource AccentBrush}" IsVisible="False" />
+                        </Canvas>
+                        <StackPanel IsVisible="{Binding !HasDocument}" VerticalAlignment="Center" Margin="14" Spacing="10" IsHitTestVisible="False">
+                            <controls:Icon Data="{x:Static controls:Icons.Drop}" Width="26" Height="26" HorizontalAlignment="Center"
+                                           Foreground="{DynamicResource TextFaint}" />
+                            <TextBlock Classes="muted" Text="{DynamicResource T_PagesDropHint}" TextWrapping="Wrap" TextAlignment="Center" FontSize="12" />
+                        </StackPanel>
+                    </Panel>
+                </DockPanel>
+            </Border>
+
+            <!-- ============ The page ============ -->
+            <Panel Grid.Column="2" Background="{DynamicResource CanvasBackground}">
+                <!-- The page takes the keyboard focus when it is clicked. That must not scroll it: a view that jumps to the
+                     corner of the page on every click cannot be worked in. -->
+                <ScrollViewer x:Name="Viewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                              IsVisible="{Binding HasDocument}" Focusable="False" BringIntoViewOnFocusChange="False">
+                    <!-- More room below than above: the bar with the page and zoom controls floats there. -->
+                    <Border Margin="24,20,24,68" HorizontalAlignment="Center" VerticalAlignment="Center"
+                            BoxShadow="{DynamicResource PageShadow}">
+                        <controls:PageCanvas x:Name="PageView"
+                                             Source="{Binding PageBitmap}"
+                                             PageWidth="{Binding PageWidth}" PageHeight="{Binding PageHeight}"
+                                             PointScale="{Binding PointScale}"
+                                             Overlays="{Binding Overlays}"
+                                             SelectedOverlay="{Binding SelectedOverlay}"
+                                             Objects="{Binding Objects}"
+                                             SelectedObject="{Binding SelectedObject}"
+                                             Region="{Binding Region}"
+                                             DimOutsideRegion="{Binding DimOutsideRegion}"
+                                             Mode="{Binding CanvasMode}" />
+                    </Border>
+                </ScrollViewer>
+
+                <!-- Says that the page shows what a tool would do, not what the document holds. -->
+                <Border IsVisible="{Binding IsPreview}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14,12"
+                        Padding="10,4" CornerRadius="11" Background="{DynamicResource AccentBrush}" IsHitTestVisible="False">
+                    <TextBlock Foreground="White" FontSize="11" FontWeight="SemiBold" LetterSpacing="0.4" Text="{DynamicResource T_PreviewBadge}" />
+                </Border>
+
+                <!-- Turning pages and zooming, always within reach whatever part of the page is on view. -->
+                <Border Classes="floating" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,14"
+                        IsVisible="{Binding HasDocument}">
+                    <StackPanel Orientation="Horizontal" Spacing="1">
+                        <Button Classes="ghost" Command="{Binding PreviousPageCommand}" ToolTip.Tip="{DynamicResource T_TipPreviousPage}">
+                            <controls:Icon Data="{x:Static controls:Icons.Previous}" Width="16" Height="16" />
+                        </Button>
+                        <TextBlock Text="{Binding PageLabel}" VerticalAlignment="Center" MinWidth="58" TextAlignment="Center" FontWeight="Medium" />
+                        <Button Classes="ghost" Command="{Binding NextPageCommand}" ToolTip.Tip="{DynamicResource T_TipNextPage}">
+                            <controls:Icon Data="{x:Static controls:Icons.Next}" Width="16" Height="16" />
+                        </Button>
+                        <Border Classes="separator" />
+                        <Button Classes="ghost" Command="{Binding ZoomOutCommand}" ToolTip.Tip="{DynamicResource T_ZoomOut}">
+                            <controls:Icon Data="{x:Static controls:Icons.Minus}" Width="16" Height="16" />
+                        </Button>
+                        <TextBlock Text="{Binding ZoomLabel}" VerticalAlignment="Center" MinWidth="48" TextAlignment="Center" FontWeight="Medium" />
+                        <Button Classes="ghost" Command="{Binding ZoomInCommand}" ToolTip.Tip="{DynamicResource T_ZoomIn}">
+                            <controls:Icon Data="{x:Static controls:Icons.Plus}" Width="16" Height="16" />
+                        </Button>
+                        <Border Classes="separator" />
+                        <Button Classes="ghost" x:Name="FitButton" ToolTip.Tip="{DynamicResource T_Fit}">
+                            <controls:Icon Data="{x:Static controls:Icons.FitPage}" Width="16" Height="16" />
+                        </Button>
+                        <Button Classes="ghost" x:Name="FitWidthButton" ToolTip.Tip="{DynamicResource T_FitWidth}">
+                            <controls:Icon Data="{x:Static controls:Icons.FitWidth}" Width="16" Height="16" />
+                        </Button>
+                        <Button Classes="ghost" Content="1:1" FontSize="12" FontWeight="SemiBold" Command="{Binding ZoomActualSizeCommand}"
+                                ToolTip.Tip="{DynamicResource T_ZoomActual}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Nothing open yet. -->
+                <Border IsVisible="{Binding !HasDocument}" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520"
+                        Padding="44,38" CornerRadius="16" Background="{DynamicResource PanelBackground}"
+                        BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" BoxShadow="{DynamicResource FloatingShadow}">
+                    <StackPanel Spacing="12">
+                        <Border Width="60" Height="60" CornerRadius="18" Background="{DynamicResource AccentSoft}" HorizontalAlignment="Center">
+                            <controls:Icon Data="{x:Static controls:Icons.Drop}" Width="28" Height="28" Weight="1.8"
+                                           Foreground="{DynamicResource AccentText}" />
+                        </Border>
+                        <TextBlock Text="{DynamicResource T_EmptyTitle}" FontSize="21" FontWeight="SemiBold" HorizontalAlignment="Center"
+                                   TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0" />
+                        <TextBlock Classes="muted" Text="{DynamicResource T_EmptyHint}" HorizontalAlignment="Center" TextWrapping="Wrap"
+                                   TextAlignment="Center" LineHeight="20" />
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,10,0,0">
+                            <Button Classes="accent" Command="{Binding OpenCommand}" Padding="20,8">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <controls:Icon Data="{x:Static controls:Icons.Open}" Width="16" Height="16" />
+                                    <TextBlock Text="{DynamicResource T_EmptyOpen}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding AddPagesCommand}" Padding="18,8">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <controls:Icon Data="{x:Static controls:Icons.Picture}" Width="16" Height="16" />
+                                    <TextBlock Text="{DynamicResource T_EmptyImages}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Panel>
+
+            <!-- ============ Options of the selected tool ============ -->
+            <Border Classes="panel" Grid.Column="3" BorderThickness="1,0,0,0">
+                <DockPanel>
+                    <Border DockPanel.Dock="Bottom" Padding="16,12,16,16" IsVisible="{Binding ShowApply}"
+                            BorderBrush="{DynamicResource PanelBorder}" BorderThickness="0,1,0,0">
+                        <StackPanel Spacing="9">
+                            <CheckBox IsVisible="{Binding CanPreview}" IsChecked="{Binding ShowPreview}">
+                                <TextBlock Text="{DynamicResource T_PreviewShow}" TextWrapping="Wrap" />
+                            </CheckBox>
+                            <TextBlock Classes="muted" Text="{Binding PreviewNote}" TextWrapping="Wrap" FontSize="12.5"
+                                       IsVisible="{Binding PreviewNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                            <TextBlock Classes="muted" Text="{Binding ApplySummary}" TextWrapping="Wrap" FontSize="12.5"
+                                       IsVisible="{Binding ApplySummary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                            <Button Classes="accent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="0,9" MinHeight="38"
+                                    Content="{Binding SelectedTool.ApplyLabel}" Command="{Binding ApplyCommand}" IsEnabled="{Binding IsIdle}" />
+                        </StackPanel>
+                    </Border>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Margin="16,16,16,16">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="0,0,0,12">
+                                <Border Width="40" Height="40" CornerRadius="11" Background="{DynamicResource AccentSoft}" VerticalAlignment="Top">
+                                    <controls:Icon Data="{Binding SelectedTool.Icon}" Width="20" Height="20" Foreground="{DynamicResource AccentText}" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Classes="group" Text="{Binding SelectedTool.Group}" />
+                                    <TextBlock Text="{Binding SelectedTool.Title}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Classes="muted" Text="{Binding SelectedTool.Description}" TextWrapping="Wrap" Margin="0,0,0,18" LineHeight="19" />
+                            <ItemsControl x:Name="FieldList" ItemsSource="{Binding SelectedTool.Fields}" IsEnabled="{Binding IsIdle}">
+                                <ItemsControl.DataTemplates>
+                                    <!-- A template is chosen by the first type that fits, so the special kinds come before the general ones. -->
+                                    <DataTemplate DataType="vm:TextField">
+                                        <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="5">
+                                            <TextBlock Classes="label" Text="{Binding Label}" />
+                                            <TextBox Text="{Binding Value}" AcceptsReturn="{Binding Multiline}" TextWrapping="Wrap"
+                                                     PasswordChar="{Binding PasswordChar}" MaxHeight="170"
+                                                     views:FieldFocus.Source="{Binding}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    <DataTemplate DataType="vm:SliderField">
+                                        <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="2">
+                                            <TextBlock Classes="label" Text="{Binding Label}" />
+                                            <Grid ColumnDefinitions="*,96" ColumnSpacing="8">
+                                                <Slider Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Value="{Binding Position}"
+                                                        SmallChange="{Binding Increment}" LargeChange="{Binding Increment}" VerticalAlignment="Center" />
+                                                <NumericUpDown Grid.Column="1" Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
+                                                               Increment="{Binding Increment}" FormatString="{Binding Format}" ShowButtonSpinner="False"
+                                                               VerticalAlignment="Center" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    <DataTemplate DataType="vm:NumberField">
+                                        <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="5">
+                                            <TextBlock Classes="label" Text="{Binding Label}" />
+                                            <NumericUpDown Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
+                                                           Increment="{Binding Increment}" FormatString="{Binding Format}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    <DataTemplate DataType="vm:ToggleField">
+                                        <ToggleButton IsVisible="{Binding IsVisible}" IsChecked="{Binding Value}" Content="{Binding Symbol}"
+                                                      ToolTip.Tip="{Binding Label}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                                      MinHeight="32" FontWeight="SemiBold" Margin="0,0,0,13" />
+                                    </DataTemplate>
+                                    <DataTemplate DataType="vm:BoolField">
+                                        <CheckBox IsVisible="{Binding IsVisible}" IsChecked="{Binding Value}" Margin="0,0,0,7">
+                                            <TextBlock Text="{Binding Label}" TextWrapping="Wrap" />
+                                        </CheckBox>
+                                    </DataTemplate>
+                                    <DataTemplate DataType="vm:ModeField">
+                                        <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="5">
+                                            <TextBlock Classes="label" Text="{Binding Label}"
+                                                       IsVisible="{Binding Label, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                            <ListBox Classes="segments" ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}"
+                                                     SelectionMode="Single,AlwaysSelected">
+                                                <ListBox.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <UniformGrid Rows="1" />
+                                                    </ItemsPanelTemplate>
+                                                </ListBox.ItemsPanel>
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:Choice">
+                                                        <TextBlock Text="{Binding Label}" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                                   ToolTip.Tip="{Binding Label}" />
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    <DataTemplate DataType="vm:ChoiceField">
+                                        <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="5">
+                                            <TextBlock Classes="label" Text="{Binding Label}" />
+                                            <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}" HorizontalAlignment="Stretch">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:Choice">
+                                                        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    <DataTemplate DataType="vm:PagesField">
+                                        <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="5">
+                                            <TextBlock Classes="label" Text="{Binding Label}" />
+                                            <ComboBox ItemsSource="{Binding Scopes}" SelectedItem="{Binding Scope}" HorizontalAlignment="Stretch">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:Choice">
+                                                        <TextBlock Text="{Binding Label}" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                            <TextBox Text="{Binding Range}" IsVisible="{Binding IsRange}" Watermark="{DynamicResource T_PagesRangeHint}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    <DataTemplate DataType="vm:ColorField">
+                                        <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="6">
+                                            <TextBlock Classes="label" Text="{Binding Label}" />
+                                            <CheckBox IsVisible="{Binding AllowAutomatic}" IsChecked="{Binding Automatic}">
+                                                <TextBlock Text="{Binding AutomaticLabel}" TextWrapping="Wrap" />
+                                            </CheckBox>
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                                <Border Width="32" Height="32" CornerRadius="6" BorderBrush="#70808080" BorderThickness="1"
+                                                        Background="{Binding Preview}" />
+                                                <TextBox Grid.Column="1" Text="{Binding Value}" VerticalAlignment="Center" />
+                                                <ToggleButton Grid.Column="2" IsChecked="{Binding IsPicking, Mode=OneWay}" Command="{Binding PickCommand}"
+                                                              Content="{DynamicResource T_ColorPick}" ToolTip.Tip="{DynamicResource T_ColorPickHint}" />
+                                            </Grid>
+                                            <ItemsControl ItemsSource="{Binding Swatches}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:Swatch">
+                                                        <Button Classes="swatch" Background="{Binding Brush}" ToolTip.Tip="{Binding Hex}"
+                                                                Command="{Binding $parent[ItemsControl].((vm:ColorField)DataContext).UseCommand}"
+                                                                CommandParameter="{Binding}" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    <DataTemplate DataType="vm:FolderField">
+                                        <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="5">
+                                            <TextBlock Classes="label" Text="{Binding Label}" />
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                                <TextBox Text="{Binding Path}" ToolTip.Tip="{Binding Path}" />
+                                                <Button Grid.Column="1" Content="{DynamicResource T_Browse}" Command="{Binding BrowseFolderCommand}" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    <DataTemplate DataType="vm:FileField">
+                                        <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="5">
+                                            <TextBlock Classes="label" Text="{Binding Label}" />
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                                <TextBox Text="{Binding FileName}" IsReadOnly="True" ToolTip.Tip="{Binding Path}" />
+                                                <Button Grid.Column="1" Content="{DynamicResource T_Browse}" Command="{Binding BrowseFileCommand}" />
+                                            </Grid>
+                                            <!-- Files used before: one click instead of browsing to them again. -->
+                                            <StackPanel IsVisible="{Binding HasRecent}" Spacing="4" Margin="0,5,0,0">
+                                                <TextBlock Classes="label" Text="{DynamicResource T_RecentFiles}" />
+                                                <ItemsControl ItemsSource="{Binding Recent}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:RecentFile">
+                                                            <Panel Classes="recentItem" Margin="0,0,7,7" Background="Transparent">
+                                                                <Button Classes="recent" Classes.current="{Binding IsCurrent}" Margin="0" ToolTip.Tip="{Binding Path}"
+                                                                        Command="{Binding $parent[ItemsControl].((vm:FileField)DataContext).UseRecentCommand}"
+                                                                        CommandParameter="{Binding}">
+                                                                    <Button.ContextMenu>
+                                                                        <ContextMenu>
+                                                                            <MenuItem Header="{DynamicResource T_RecentPin}" IsVisible="{Binding !IsPinned}"
+                                                                                      Command="{Binding TogglePinCommand}" />
+                                                                            <MenuItem Header="{DynamicResource T_RecentUnpin}" IsVisible="{Binding IsPinned}"
+                                                                                      Command="{Binding TogglePinCommand}" />
+                                                                            <MenuItem Header="{DynamicResource T_RecentForget}" Command="{Binding ForgetCommand}" />
+                                                                        </ContextMenu>
+                                                                    </Button.ContextMenu>
+                                                                    <Panel Width="58" Height="58">
+                                                                        <TextBlock Text="{Binding Name}" FontSize="10" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                                                                                   VerticalAlignment="Center" TextAlignment="Center" Opacity="0.7" />
+                                                                        <Image Source="{Binding Thumbnail}" Stretch="Uniform" />
+                                                                    </Panel>
+                                                                </Button>
+                                                                <!-- Pinned: stays in the list whatever else is used. -->
+                                                                <Border Classes="pinmark" IsVisible="{Binding IsPinned}" IsHitTestVisible="False">
+                                                                    <controls:Icon Data="{x:Static controls:Icons.Pin}" Width="10" Height="10" Foreground="White" />
+                                                                </Border>
+                                                                <!-- Under the pointer: pin it, or take it off the list. -->
+                                                                <StackPanel Classes="recentTools" Orientation="Horizontal" Spacing="2"
+                                                                            HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,3,3,0">
+                                                                    <Button Classes="mini" IsVisible="{Binding !IsPinned}" Command="{Binding TogglePinCommand}"
+                                                                            ToolTip.Tip="{DynamicResource T_RecentPin}">
+                                                                        <controls:Icon Data="{x:Static controls:Icons.Pin}" Width="10" Height="10" />
+                                                                    </Button>
+                                                                    <Button Classes="mini on" IsVisible="{Binding IsPinned}" Command="{Binding TogglePinCommand}"
+                                                                            ToolTip.Tip="{DynamicResource T_RecentUnpin}">
+                                                                        <controls:Icon Data="{x:Static controls:Icons.Pin}" Width="10" Height="10" />
+                                                                    </Button>
+                                                                    <Button Classes="mini danger" Command="{Binding ForgetCommand}"
+                                                                            ToolTip.Tip="{DynamicResource T_RecentForget}">
+                                                                        <controls:Icon Data="{x:Static controls:Icons.Close}" Width="9" Height="9" />
+                                                                    </Button>
+                                                                </StackPanel>
+                                                            </Panel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    <DataTemplate DataType="vm:FileListField">
+                                        <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="5">
+                                            <TextBlock Classes="label" Text="{Binding Label}" />
+                                            <ListBox ItemsSource="{Binding Files}" SelectedItem="{Binding Selected}" Height="130" CornerRadius="6"
+                                                     BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" Background="{DynamicResource ControlFill}">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="x:String">
+                                                        <TextBlock Text="{Binding Converter={x:Static views:Converters.FileName}}"
+                                                                   ToolTip.Tip="{Binding}" TextTrimming="CharacterEllipsis" />
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <Button Content="{DynamicResource T_Add}" Command="{Binding AddCommand}" />
+                                                <Button Content="{DynamicResource T_Remove}" Command="{Binding RemoveCommand}" />
+                                                <Button Content="↑" Command="{Binding MoveUpCommand}" />
+                                                <Button Content="↓" Command="{Binding MoveDownCommand}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    <DataTemplate DataType="vm:InfoField">
+                                        <Panel IsVisible="{Binding IsVisible}">
+                                            <Border Classes="note" IsVisible="{Binding HasText}" Margin="0,0,0,13">
+                                                <SelectableTextBlock Classes="muted" Text="{Binding Text}" TextWrapping="Wrap" FontSize="12.5" LineHeight="18" />
+                                            </Border>
+                                        </Panel>
+                                    </DataTemplate>
+                                    <DataTemplate DataType="vm:ActionField">
+                                        <Button IsVisible="{Binding IsVisible}" Command="{Binding Command}"
+                                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,10">
+                                            <TextBlock Text="{Binding Label}" TextWrapping="Wrap" TextAlignment="Center" />
+                                        </Button>
+                                    </DataTemplate>
+                                    <DataTemplate DataType="vm:CheckListField">
+                                        <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,13" Spacing="5">
+                                            <TextBlock Classes="label" Text="{Binding Label}" />
+                                            <ItemsControl ItemsSource="{Binding Items}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:CheckItem">
+                                                        <CheckBox IsChecked="{Binding IsChecked}">
+                                                            <TextBlock Text="{Binding Label}" TextWrapping="Wrap" />
+                                                        </CheckBox>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    <!-- The pages a sheet is about to be cut into, in their new order. -->
+                                    <DataTemplate DataType="vm:PieceListField">
+                                        <StackPanel IsVisible="{Binding IsVisible}" Margin="0,0,0,7" Spacing="6">
+                                            <TextBlock Classes="label" Text="{Binding Label}" />
+                                            <ItemsControl ItemsSource="{Binding Items}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:PieceItem">
+                                                        <Button Classes="piece"
+                                                                Command="{Binding $parent[ItemsControl].((vm:PieceListField)DataContext).ChooseCommand}"
+                                                                CommandParameter="{Binding}">
+                                                            <Panel Width="{Binding DisplayWidth}" Height="{Binding DisplayHeight}">
+                                                                <Border Background="White" CornerRadius="2" />
+                                                                <Image Source="{Binding Picture}" Stretch="Fill" />
+                                                                <Border Classes="badge" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="3">
+                                                                    <TextBlock Text="{Binding Label}" />
+                                                                </Border>
+                                                            </Panel>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    <DataTemplate DataType="vm:RowField">
+                                        <ItemsControl IsVisible="{Binding IsVisible}" ItemsSource="{Binding Fields}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <controls:RowPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+                                    </DataTemplate>
+                                </ItemsControl.DataTemplates>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
